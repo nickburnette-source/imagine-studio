@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Rally · formula layout</title>
+<style>
+  :root {
+    --bg: #0d0e14;
+    --ink: #e8e8e8;
+    --mute: #8b8d98;
+    --line: rgba(255,255,255,.08);
+    --teal: #2dd4bf;
+    --green: #37BD39;
+    --c-start: #2dd4bf;
+    --c-concept: #8ab4ff;
+    --c-sound: #9ee37d;
+    --c-voice: #e9a6c9;
+    --c-shot: #c3a6ff;
+    --c-end: #f0a36b;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%;
+    background: var(--bg); color: var(--ink);
+    font: 13px/1.4 ui-sans-serif, system-ui, -apple-system, sans-serif;
+  }
+  button, textarea { font: inherit; color: inherit; }
+  button { cursor: pointer; border: 0; background: none; }
+  .app {
+    height: 100%;
+    display: grid;
+    grid-template-rows: 48px 36px 1fr;
+  }
+  .top {
+    display: flex; align-items: center; gap: 12px;
+    padding: 0 14px;
+    border-bottom: 1px solid var(--line);
+  }
+  .brand { color: var(--green); font-weight: 700; letter-spacing: .04em; }
+  .name { font-weight: 600; }
+  .name span { color: var(--mute); font-weight: 400; margin-left: 8px; }
+  .spacer { flex: 1; }
+  .ico {
+    width: 28px; height: 28px; border-radius: 8px;
+    border: 1px solid var(--line); color: var(--mute);
+    display: grid; place-items: center;
+  }
+  .pack {
+    display: flex; align-items: stretch;
+    border-bottom: 1px solid var(--line);
+  }
+  .clip {
+    flex: 1; min-width: 72px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 2px; color: var(--mute); border-right: 1px solid var(--line); position: relative;
+  }
+  .clip .k { font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
+  .clip .s { font-size: 10px; }
+  .clip.is-on { color: var(--ink); background: rgba(45,212,191,.08); }
+  .clip.is-on::after {
+    content: ""; position: absolute; left: 12%; right: 12%; bottom: 0; height: 2px;
+    background: var(--teal);
+  }
+  .clip.is-ok .s { color: var(--green); }
+  .clip .dot { width: 6px; height: 6px; border-radius: 50%; background: #333; margin-top: 2px; }
+  .clip.is-ok .dot { background: var(--green); }
+  .clip.is-on .dot { background: var(--teal); }
+
+  .work {
+    min-height: 0; display: flex; flex-direction: column;
+    padding: 14px 16px 16px;
+  }
+  .bar {
+    display: flex; align-items: center; gap: 12px; margin-bottom: 12px;
+  }
+  .surf {
+    display: flex; background: #16171f; border: 1px solid var(--line);
+    border-radius: 11px; padding: 3px;
+  }
+  .surf b {
+    padding: 6px 16px; border-radius: 8px; font-size: 12px;
+    font-weight: 700; color: var(--mute);
+  }
+  .surf b.on { background: #1c2430; color: var(--ink); }
+
+  .row {
+    flex: 1; min-height: 0;
+    display: grid;
+    grid-template-columns: 150px 28px minmax(200px, 1fr) 28px 150px 28px minmax(220px, 1.15fr) 28px 220px;
+    align-items: stretch;
+  }
+
+  .div {
+    position: relative;
+    border-left: 1px solid var(--line);
+    margin: 8px 0;
+  }
+  .div .plus {
+    position: absolute; left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    width: 22px; height: 22px; border-radius: 50%;
+    background: var(--bg); color: var(--teal);
+    display: grid; place-items: center;
+    font-size: 16px; font-weight: 700; line-height: 1;
+    pointer-events: none;
+  }
+
+  .frame, .stack, .compiled, .output {
+    min-height: 0; display: flex; flex-direction: column; gap: 8px;
+  }
+
+  .slot {
+    flex: 1; min-height: 0;
+    background: #16171f; border: 1px solid var(--line); border-radius: 14px;
+    display: flex; flex-direction: column; overflow: hidden; position: relative;
+  }
+  .slot.is-mute { opacity: .38; }
+  .slot.is-on { border-color: rgba(45,212,191,.45); }
+  .slot.is-look { border-color: rgba(232,194,122,.45); }
+  .glass {
+    flex: 1; min-height: 0; cursor: pointer; position: relative;
+    background: repeating-linear-gradient(135deg, #14151c 0 7px, #191a22 7px 14px);
+  }
+  .glass .pic { position: absolute; inset: 0; }
+  .g1 { background: linear-gradient(160deg,#3a2a20,#1a2838); }
+  .g2 { background: linear-gradient(160deg,#203040,#402028); }
+  .g3 { background: linear-gradient(160deg,#1a2a22,#2a2018); }
+  .g4 { background: linear-gradient(160deg,#241828,#1a2030); }
+  .glass .empty {
+    position: absolute; inset: 0; display: grid; place-items: center;
+    text-align: center; padding: 12px; color: #6a6d78;
+    font-size: 12px; letter-spacing: .04em;
+  }
+  .type {
+    margin: 8px; padding: 7px 10px; border-radius: 10px;
+    border: 1px solid #2c2c2c; background: #1a1a1a;
+    font-size: 11px; font-weight: 700; letter-spacing: .08em;
+    text-transform: uppercase; color: var(--ink);
+  }
+  .type:hover { border-color: var(--teal); color: var(--teal); }
+  .mute {
+    position: absolute; top: 8px; right: 8px; z-index: 2;
+    width: 26px; height: 26px; border-radius: 8px;
+    background: rgba(0,0,0,.45); color: var(--mute);
+    display: grid; place-items: center;
+  }
+  .mute:hover, .mute.on { color: #f0a36b; }
+
+  .piece {
+    background: #16171f; border: 1px solid var(--line); border-radius: 12px;
+    padding: 10px 12px 10px 12px; position: relative; text-align: left;
+    min-height: 48px;
+  }
+  .piece.prompt { flex: 1; min-height: 140px; display: flex; flex-direction: column; }
+  .piece.open { border-color: var(--teal); }
+  .piece.is-mute { opacity: .38; }
+  .piece .k {
+    font-size: 11px; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--mute); font-weight: 650;
+  }
+  .piece .v { margin-top: 4px; color: #d0d2da; font-size: 12px; line-height: 1.35; }
+  .piece textarea {
+    flex: 1; width: 100%; margin-top: 6px; background: transparent;
+    border: 0; outline: none; resize: none; color: #e8e8e8; min-height: 80px;
+  }
+  .piece .mute { top: 6px; right: 6px; background: transparent; }
+
+  .compiled {
+    background: #12131a; border: 1px solid var(--line); border-radius: 14px;
+    padding: 12px 14px; overflow: auto;
+  }
+  .compiled .k {
+    font-size: 11px; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--mute); margin-bottom: 10px;
+  }
+  .raw { font-size: 13px; line-height: 1.7; color: #cfd1d8; }
+  .raw span {
+    border-radius: 4px; padding: 1px 3px;
+    transition: background .2s;
+  }
+  .raw span.hot {
+    background: color-mix(in srgb, var(--c, var(--teal)) 28%, transparent);
+    box-shadow: inset 0 -2px 0 var(--c, var(--teal));
+  }
+  .raw span.flash { animation: hit .65s ease; }
+  @keyframes hit {
+    0% { background: color-mix(in srgb, var(--c, var(--teal)) 55%, transparent); color: #fff; }
+    100% { background: transparent; }
+  }
+  .raw .op { color: var(--teal); padding: 0 5px; font-weight: 700; opacity: .7; }
+
+  .output { min-height: 0; }
+  .phone {
+    flex: 1; min-height: 0; border-radius: 16px;
+    background: linear-gradient(180deg,#1c2838,#0e1218);
+    border: 1px solid var(--line);
+    box-shadow: 0 16px 40px #0006;
+    position: relative; overflow: hidden;
+  }
+  .phone span {
+    position: absolute; left: 10px; bottom: 10px;
+    font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: #fff8;
+  }
+  .phone.flash { animation: ring .55s ease; }
+  @keyframes ring {
+    0% { box-shadow: 0 0 0 0 rgba(55,189,57,.55); }
+    100% { box-shadow: 0 0 0 14px rgba(55,189,57,0); }
+  }
+  .acts { display: flex; gap: 8px; }
+  .ghost {
+    flex: 1; border: 1px solid #2c2c2c; padding: 9px 10px;
+    border-radius: 10px; font-weight: 650;
+  }
+  .ok { flex: 1; border: 1px solid var(--green); color: var(--green);
+    padding: 9px 10px; border-radius: 10px; font-weight: 650; }
+  .go {
+    background: var(--green); color: #041; font-weight: 800;
+    padding: 10px; border-radius: 10px; width: 100%;
+  }
+
+  .modal {
+    position: fixed; inset: 0; background: #0008;
+    display: flex; align-items: center; justify-content: center; z-index: 30;
+  }
+  .modal[hidden] { display: none !important; }
+  .picker {
+    width: min(520px, 92vw); background: #12131a; border: 1px solid var(--line);
+    border-radius: 16px; padding: 16px; box-shadow: 0 24px 80px #000c;
+  }
+  .picker h2 { margin: 0; font-size: 14px; }
+  .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 12px; }
+  .pick {
+    aspect-ratio: 9/16; border-radius: 10px; border: 1px solid var(--line);
+    position: relative; overflow: hidden;
+  }
+  .pick:hover, .pick.on { border-color: var(--teal); }
+  .pick .nm {
+    position: absolute; left: 0; right: 0; bottom: 0; text-align: center;
+    font-size: 10px; padding: 5px; background: linear-gradient(transparent, #000d);
+  }
+  .pick.none {
+    display: grid; place-items: center;
+    background: repeating-linear-gradient(135deg, #14151c 0 7px, #191a22 7px 14px);
+    color: var(--mute); font-size: 11px; letter-spacing: .06em; text-transform: uppercase;
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <span class="brand">← DutyCall</span>
+    <div class="name">Friendly Asset Retrieval <span>Accept</span></div>
+    <div class="spacer"></div>
+    <button class="ico">↻</button>
+    <button class="ico">⚙</button>
+  </header>
+  <nav class="pack">
+    <div class="clip is-ok"><span class="k">Preview</span><span class="s">approved</span><span class="dot"></span></div>
+    <div class="clip is-ok"><span class="k">Rally</span><span class="s">approved</span><span class="dot"></span></div>
+    <div class="clip is-ok"><span class="k">Message</span><span class="s">approved</span><span class="dot"></span></div>
+    <div class="clip is-ok"><span class="k">Idle</span><span class="s">approved</span><span class="dot"></span></div>
+    <div class="clip is-on"><span class="k">Accept</span><span class="s">framed</span><span class="dot"></span></div>
+    <div class="clip"><span class="k">Decline</span><span class="s">framed</span><span class="dot"></span></div>
+    <div class="clip"><span class="k">Reschedule</span><span class="s">framed</span><span class="dot"></span></div>
+  </nav>
+
+  <div class="work">
+    <div class="bar">
+      <div class="surf">
+        <b id="stillBtn">Still</b>
+        <b id="takeBtn" class="on">Take</b>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="frame">
+        <div class="slot" id="startSlot">
+          <button class="mute" id="startMute" title="Mute">M</button>
+          <button class="glass" id="startGlass">
+            <div class="pic g3" id="startPic" hidden></div>
+            <div class="empty" id="startEmpty">Frame 1 or Ref</div>
+          </button>
+          <button class="type" id="startType">Type</button>
+        </div>
+      </div>
+
+      <div class="div"><span class="plus">+</span></div>
+
+      <div class="stack" id="stack"></div>
+
+      <div class="div"><span class="plus">+</span></div>
+
+      <div class="frame" id="endWrap">
+        <div class="slot" id="endSlot">
+          <button class="mute" id="endMute" title="Mute">M</button>
+          <button class="glass" id="endGlass">
+            <div class="pic g2" id="endPic" hidden></div>
+            <div class="empty" id="endEmpty">Frame end or Nothing</div>
+          </button>
+          <button class="type" id="endType">Type</button>
+        </div>
+      </div>
+
+      <div class="div" id="divEnd"><span class="plus">+</span></div>
+
+      <div class="compiled">
+        <div class="k">Compiled prompt</div>
+        <div class="raw" id="raw"></div>
+      </div>
+
+      <div class="div"><span class="plus">+</span></div>
+
+      <div class="output">
+        <div class="phone" id="phone"><span id="outCap">Accept · take</span></div>
+        <button class="go" id="go">Make take</button>
+        <div class="acts">
+          <button class="ghost">Tweak</button>
+          <button class="ok">Approve</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="modal" hidden>
+  <div class="picker">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <h2 id="pickTitle">Choose a still</h2>
+      <button class="ghost" id="pickClose" style="flex:0;padding:6px 10px;">Close</button>
+    </div>
+    <div class="grid" id="pickGrid"></div>
+  </div>
+</div>
+
+<script>
+const STILLS = [
+  { id: null, name: 'Nothing', g: 'none' },
+  { id: 'preview', name: 'Preview', g: 'g1' },
+  { id: 'idle', name: 'Idle', g: 'g2' },
+  { id: 'clip', name: 'This clip', g: 'g3' },
+  { id: 'msg', name: 'Msg last', g: 'g4' },
+];
+const START_T = [
+  { id: 'unique', lab: 'Unique' },
+  { id: 'start', lab: 'Frame 1' },
+  { id: 'look', lab: 'Ref' },
+];
+const END_T = [
+  { id: 'none', lab: 'Nothing' },
+  { id: 'pin', lab: 'Frame end' },
+  { id: 'loop', lab: 'Loop' },
+];
+const PIECES = {
+  still: [
+    { id: 'concept', lab: 'Concept', c: 'var(--c-concept)', auto: 'Elite squad abducts a friend for a gaming session.' },
+    { id: 'shot', lab: 'Prompt', c: 'var(--c-shot)', auto: 'Ball-cap and one other soldier on the roof. Repel wires still attached. Charges in the center, ready to breach.', prompt: true },
+  ],
+  take: [
+    { id: 'concept', lab: 'Concept', c: 'var(--c-concept)', auto: 'Elite squad abducts a friend for a gaming session.' },
+    { id: 'sound', lab: 'Sound FX', c: 'var(--c-sound)', auto: 'Rotors, radio, rooftop wind.' },
+    { id: 'voice', lab: 'Voice', c: 'var(--c-voice)', auto: 'Invent' },
+    { id: 'shot', lab: 'Prompt', c: 'var(--c-shot)', auto: 'They take cover, then the charges blow. Camera locked.', prompt: true },
+  ],
+};
+
+const layers = {
+  still: { startT: 'look', startS: 'preview', startM: false, endT: 'none', endS: null, endM: false, mute: {}, edit: {} },
+  take:  { startT: 'unique', startS: null, startM: false, endT: 'none', endS: null, endM: false, mute: {}, edit: {} },
+};
+let surf = 'take';
+let openId = null;
+let pickFor = null;
+
+function L(){ return layers[surf]; }
+function still(id){ return STILLS.find(s => s.id === id) || STILLS[0]; }
+
+function startLine(){
+  const l = L();
+  if (l.startM) return '';
+  if (l.startT === 'unique' || !l.startS) return 'No start-frame pin. Invent the opening from the shot.';
+  const n = still(l.startS).name;
+  if (l.startT === 'look') return n + ' is identity / look only — not frame 1. Do not copy pose.';
+  return 'Image-to-video begins on ' + n + ' (frame 1). The shot is what happens next.';
+}
+function endLine(){
+  if (surf === 'still') return '';
+  const l = L();
+  if (l.endM) return '';
+  if (l.endT === 'none' || (l.endT === 'pin' && !l.endS)) return '';
+  if (l.endT === 'loop') return 'Loop: last frame matches frame 1.';
+  return 'Last frame: ' + still(l.endS).name + '. Land here.';
+}
+function pieceVal(p){
+  if (L().mute[p.id]) return '';
+  if (L().edit[p.id] != null) return L().edit[p.id].trim();
+  return (p.auto || '').trim();
+}
+
+function parts(){
+  const out = [];
+  const s = startLine();
+  if (s) out.push({ id: 'start', c: 'var(--c-start)', t: s });
+  PIECES[surf].forEach(p => {
+    const v = pieceVal(p);
+    if (v) out.push({ id: p.id, c: p.c, t: (p.id==='concept'?'Concept: ':'') + (p.id==='sound'?'Sound: ':'') + v });
+  });
+  const e = endLine();
+  if (e) out.push({ id: 'end', c: 'var(--c-end)', t: e });
+  return out;
+}
+
+function flash(id){
+  document.querySelectorAll('#raw [data-id]').forEach(el => {
+    el.classList.toggle('hot', el.dataset.id === id);
+    if (el.dataset.id === id) {
+      el.classList.remove('flash');
+      void el.offsetWidth;
+      el.classList.add('flash');
+    }
+  });
+}
+
+function renderStack(){
+  const el = document.getElementById('stack');
+  el.innerHTML = PIECES[surf].map(p => {
+    const muted = !!L().mute[p.id];
+    const v = pieceVal(p) || (muted ? 'muted' : '');
+    if (p.prompt) {
+      return `<div class="piece prompt ${openId===p.id?'open':''} ${muted?'is-mute':''}" data-id="${p.id}">
+        <button class="mute ${muted?'on':''}" data-mute="${p.id}">M</button>
+        <div class="k">${p.lab}</div>
+        <textarea data-shot>${L().edit[p.id] != null ? L().edit[p.id] : p.auto}</textarea>
+      </div>`;
+    }
+    return `<button class="piece ${openId===p.id?'open':''} ${muted?'is-mute':''}" data-id="${p.id}">
+      <span class="mute ${muted?'on':''}" data-mute="${p.id}">M</span>
+      <div class="k">${p.lab}</div>
+      <div class="v">${esc(v)}</div>
+    </button>`;
+  }).join('');
+  el.querySelectorAll('[data-mute]').forEach(b => b.onclick = e => {
+    e.stopPropagation();
+    L().mute[b.dataset.mute] = !L().mute[b.dataset.mute];
+    render(); flash(b.dataset.mute);
+  });
+  el.querySelectorAll('.piece').forEach(b => b.onclick = e => {
+    if (e.target.closest('[data-mute]') || e.target.tagName === 'TEXTAREA') return;
+    openId = b.dataset.id;
+    render(); flash(b.dataset.id);
+  });
+  const ta = el.querySelector('[data-shot]');
+  if (ta) ta.oninput = () => {
+    L().edit.shot = ta.value;
+    renderRaw(); flash('shot');
+  };
+}
+
+function renderFrames(){
+  const l = L();
+  const st = START_T.find(t => t.id === l.startT);
+  const has = st.id !== 'unique' && l.startS;
+  document.getElementById('startType').textContent = st.lab;
+  document.getElementById('startSlot').className = 'slot'
+    + (l.startM ? ' is-mute' : '')
+    + (has ? (st.id==='look' ? ' is-look' : ' is-on') : '');
+  document.getElementById('startPic').hidden = !has;
+  document.getElementById('startPic').className = 'pic ' + still(l.startS).g;
+  document.getElementById('startEmpty').hidden = has;
+  document.getElementById('startEmpty').textContent = st.id === 'unique' ? 'Unique shot' : 'Frame 1 or Ref';
+  document.getElementById('startMute').classList.toggle('on', l.startM);
+
+  const take = surf === 'take';
+  document.getElementById('endWrap').style.display = take ? '' : 'none';
+  document.getElementById('divEnd').style.display = take ? '' : 'none';
+  if (take) {
+    const et = END_T.find(t => t.id === l.endT);
+    const hasE = et.id === 'pin' && l.endS;
+    document.getElementById('endType').textContent = et.lab;
+    document.getElementById('endSlot').className = 'slot'
+      + (l.endM ? ' is-mute' : '') + (hasE || et.id==='loop' ? ' is-on' : '');
+    document.getElementById('endPic').hidden = !hasE;
+    document.getElementById('endPic').className = 'pic ' + still(l.endS).g;
+    document.getElementById('endEmpty').hidden = hasE;
+    document.getElementById('endEmpty').textContent =
+      et.id === 'loop' ? 'Loop to frame 1' : et.id === 'none' ? 'Nothing' : 'Frame end';
+    document.getElementById('endMute').classList.toggle('on', l.endM);
+  }
+}
+
+function renderRaw(){
+  const ps = parts();
+  document.getElementById('raw').innerHTML = ps.length
+    ? ps.map(p => `<span data-id="${p.id}" style="--c:${p.c}">${esc(p.t)}</span>`).join('<span class="op">+</span>')
+    : '<i style="color:#8b8d98">Nothing to send.</i>';
+  document.getElementById('raw').querySelectorAll('[data-id]').forEach(s => {
+    s.onmouseenter = () => s.classList.add('hot');
+    s.onmouseleave = () => { if (openId !== s.dataset.id) s.classList.remove('hot'); };
+    s.onclick = () => { openId = s.dataset.id; render(); flash(s.dataset.id); };
+  });
+}
+
+function render(){
+  document.getElementById('stillBtn').classList.toggle('on', surf==='still');
+  document.getElementById('takeBtn').classList.toggle('on', surf==='take');
+  document.getElementById('go').textContent = surf === 'still' ? 'Make still' : 'Make take';
+  document.getElementById('outCap').textContent = 'Accept · ' + surf;
+  renderFrames();
+  renderStack();
+  renderRaw();
+}
+
+function esc(s){ return (s||'').replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+
+function openPicker(which){
+  pickFor = which;
+  document.getElementById('pickTitle').textContent = which === 'start' ? 'Frame 1 or Ref' : 'Frame end';
+  const cur = which === 'start' ? L().startS : L().endS;
+  document.getElementById('pickGrid').innerHTML = STILLS.map(s =>
+    `<button class="pick ${s.id ? s.g : 'none'} ${s.id===cur?'on':''}" data-id="${s.id || ''}">
+      ${s.id ? `<span class="nm">${s.name}</span>` : 'Nothing'}
+    </button>`
+  ).join('');
+  document.getElementById('modal').hidden = false;
+  document.querySelectorAll('#pickGrid .pick').forEach(b => b.onclick = () => {
+    const id = b.dataset.id || null;
+    if (pickFor === 'start') {
+      L().startS = id;
+      if (!id) L().startT = 'unique';
+      else if (L().startT === 'unique') L().startT = 'start';
+    } else {
+      L().endS = id;
+      if (!id) L().endT = 'none';
+      else if (L().endT === 'none') L().endT = 'pin';
+    }
+    document.getElementById('modal').hidden = true;
+    render();
+    flash(pickFor === 'start' ? 'start' : 'end');
+  });
+}
+
+document.getElementById('stillBtn').onclick = () => { surf = 'still'; openId = null; render(); };
+document.getElementById('takeBtn').onclick = () => { surf = 'take'; openId = null; render(); };
+document.getElementById('startType').onclick = e => {
+  e.stopPropagation();
+  const i = START_T.findIndex(t => t.id === L().startT);
+  L().startT = START_T[(i + 1) % START_T.length].id;
+  if (L().startT !== 'unique' && !L().startS) L().startS = 'clip';
+  render(); flash('start');
+};
+document.getElementById('endType').onclick = e => {
+  e.stopPropagation();
+  const i = END_T.findIndex(t => t.id === L().endT);
+  L().endT = END_T[(i + 1) % END_T.length].id;
+  if (L().endT === 'pin' && !L().endS) L().endS = 'idle';
+  render(); flash('end');
+};
+document.getElementById('startGlass').onclick = () => openPicker('start');
+document.getElementById('endGlass').onclick = () => openPicker('end');
+document.getElementById('startMute').onclick = e => { e.stopPropagation(); L().startM = !L().startM; render(); flash('start'); };
+document.getElementById('endMute').onclick = e => { e.stopPropagation(); L().endM = !L().endM; render(); flash('end'); };
+document.getElementById('pickClose').onclick = () => document.getElementById('modal').hidden = true;
+document.getElementById('modal').onclick = e => { if (e.target.id === 'modal') e.currentTarget.hidden = true; };
+document.getElementById('go').onclick = () => {
+  const p = document.getElementById('phone');
+  p.classList.remove('flash'); void p.offsetWidth; p.classList.add('flash');
+};
+
+render();
+</script>
+</body>
+</html>

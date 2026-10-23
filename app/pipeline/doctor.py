@@ -1,4 +1,4 @@
-"""Environment health checks for Imagine generation."""
+"""Environment health checks."""
 
 from __future__ import annotations
 
@@ -6,10 +6,20 @@ import os
 import shutil
 import subprocess
 from dataclasses import dataclass
-from pathlib import Path
 
+from app.config import (
+    COMPRESS_SCRIPT_IOS,
+    DUTYCALL_PRIVATE_FOLDER,
+    DUTYCALL_S3_BUCKET,
+    GENERATE_BACKEND,
+    OUTPUT_DIR,
+    S3_BUCKET,
+    SKILL_PATH,
+    STEP_PROMPTS_PATH,
+    XAI_API_KEY,
+)
 from app import imagine_settings
-from app.config import GENERATE_BACKEND, OUTPUT_DIR, XAI_API_KEY
+from app.pipeline import grok_cli
 
 
 @dataclass
@@ -19,145 +29,215 @@ class Check:
     detail: str
 
 
-def _session_present() -> bool:
-    auth = Path.home() / ".grok" / "auth.json"
-    try:
-        return auth.is_file() and auth.stat().st_size > 10
-    except OSError:
-        return False
-
-
 def run_doctor() -> list[Check]:
     checks: list[Check] = []
+
     ffmpeg = shutil.which("ffmpeg")
-    checks.append(Check("ffmpeg", bool(ffmpeg), ffmpeg or "not on PATH"))
-    ffprobe = shutil.which("ffprobe")
-    checks.append(Check("ffprobe", bool(ffprobe), ffprobe or "not on PATH"))
+    checks.append(
+        Check(
+            "ffmpeg",
+            bool(ffmpeg),
+            ffmpeg or "not found on PATH",
+        )
+    )
+
+    aws = shutil.which("aws")
+    profile = os.getenv("AWS_PROFILE", "") or "default"
+    if aws:
+        try:
+            cmd = ["aws", "sts", "get-caller-identity"]
+            if profile and profile != "default":
+                cmd.extend(["--profile", profile])
+            r = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=15,
+            )
+            if r.returncode == 0:
+                checks.append(
+                    Check(
+                        "aws SSO",
+                        True,
+                        f"profile={profile} · identity ok",
+                    )
+                )
+            else:
+                err = (r.stderr or r.stdout or "").strip()
+                hint = ""
+                if "Token has expired" in err or "refresh failed" in err or "sso" in err.lower():
+                    hint = (
+                        f" — run: aws sso login --profile {profile}"
+                        "  then restart the app (./stop.sh && ./start.sh)"
+                    )
+                checks.append(
+                    Check(
+                        "aws SSO",
+                        False,
+                        f"profile={profile} · {(err[:100] or 'auth failed')}{hint}",
+                    )
+                )
+        except Exception as exc:  # noqa: BLE001
+            checks.append(Check("aws SSO", False, f"profile={profile} · {exc}"))
+    else:
+        checks.append(Check("aws SSO", False, "aws CLI not found on PATH"))
+
+    if GENERATE_BACKEND == "api":
+        checks.append(
+            Check(
+                "XAI_API_KEY",
+                bool(XAI_API_KEY),
+                "set" if XAI_API_KEY else "missing — required for backend=api",
+            )
+        )
+        checks.append(
+            Check(
+                "Imagine models",
+                True,
+                f"image={imagine_settings.image_model()} "
+                f"{imagine_settings.image_resolution()} · "
+                f"video={imagine_settings.video_model()} "
+                f"{imagine_settings.video_resolution()}",
+            )
+        )
+    elif GENERATE_BACKEND == "cli":
+        # Generation no longer shells out to `grok` agent — only needs session token
+        checks.append(
+            Check(
+                "grok login session",
+                grok_cli.auth_present(),
+                (
+                    "~/.grok/auth.json present (Imagine bearer)"
+                    if grok_cli.auth_present()
+                    else "missing — run `grok login` once for credentials"
+                ),
+            )
+        )
+        checks.append(
+            Check(
+                "XAI_API_KEY",
+                True,
+                (
+                    "set — preferred over session for Imagine"
+                    if XAI_API_KEY
+                    else "unset — using grok session token (no CLI agent)"
+                ),
+            )
+        )
+    else:
+        checks.append(
+            Check(
+                "XAI_API_KEY",
+                True,
+                f"not required for backend={GENERATE_BACKEND}",
+            )
+        )
 
     checks.append(
         Check(
             "generate backend",
-            GENERATE_BACKEND in {"stub", "cli", "api"},
+            GENERATE_BACKEND in ("stub", "cli", "api"),
             GENERATE_BACKEND,
         )
     )
-    if GENERATE_BACKEND == "stub":
-        checks.append(
-            Check(
-                "credentials",
-                True,
-                "stub writes local placeholders and does not call Imagine",
-            )
-        )
-    elif GENERATE_BACKEND == "api":
-        checks.append(
-            Check(
-                "XAI_API_KEY",
-                bool(XAI_API_KEY.strip()),
-                "set" if XAI_API_KEY.strip() else "missing — required for backend=api",
-            )
-        )
-    else:
-        has_key = bool(XAI_API_KEY.strip())
-        has_session = _session_present()
-        checks.append(
-            Check(
-                "Imagine credentials",
-                has_key or has_session,
-                (
-                    "XAI_API_KEY is set"
-                    if has_key
-                    else (
-                        "grok login session in ~/.grok/auth.json"
-                        if has_session
-                        else "set XAI_API_KEY or run `grok login`"
-                    )
-                ),
-            )
-        )
-
-    settings = imagine_settings.load()
+    s = imagine_settings.load()
     checks.append(
         Check(
-            "Imagine models",
+            "Imagine",
             True,
-            f"{settings['image_model']} {settings['image_resolution']} · "
-            f"{settings['video_model']} {settings['video_resolution']}",
+            f"{s['image_model']} {s['image_resolution']} · "
+            f"{s['video_model']} {s['video_resolution']} "
+            f"{s.get('video_duration', '6')}s",
         )
     )
 
-    if GENERATE_BACKEND == "stub":
-        checks.append(
-            Check(
-                "content S3 (video staging)",
-                True,
-                "not used while backend=stub",
-            )
-        )
-    else:
-        try:
-            from content_store import s3 as s3lib
-            from content_store.config import CONTENT_S3_BUCKET, CONTENT_S3_PREFIX
+    # S3 staging for ZDR video
+    try:
+        from content_store.config import CONTENT_S3_BUCKET, CONTENT_S3_PREFIX
+        from content_store import s3 as s3lib
 
-            if CONTENT_S3_BUCKET:
-                try:
-                    info = s3lib.ensure_bucket_access()
-                    checks.append(
-                        Check(
-                            "content S3 (video staging)",
-                            True,
-                            f"{info['bucket']} prefix={CONTENT_S3_PREFIX}",
-                        )
+        if CONTENT_S3_BUCKET:
+            try:
+                info = s3lib.ensure_bucket_access()
+                checks.append(
+                    Check(
+                        "content S3 (video staging)",
+                        True,
+                        f"{info['bucket']} prefix={CONTENT_S3_PREFIX}",
                     )
-                except Exception as exc:  # noqa: BLE001
-                    checks.append(
-                        Check(
-                            "content S3 (video staging)",
-                            False,
-                            f"{CONTENT_S3_BUCKET}: {exc}",
-                        )
-                    )
-            else:
+                )
+            except Exception as exc:  # noqa: BLE001
                 checks.append(
                     Check(
                         "content S3 (video staging)",
                         False,
-                        "CONTENT_S3_BUCKET is not set — video generation will fail",
+                        f"{CONTENT_S3_BUCKET}: {exc}",
                     )
                 )
-        except Exception as exc:  # noqa: BLE001
-            checks.append(Check("content S3 (video staging)", False, str(exc)))
-
-    profile = os.getenv("AWS_PROFILE", "") or "default"
-    aws = shutil.which("aws")
-    if GENERATE_BACKEND != "stub":
-        if not aws:
-            checks.append(Check("aws", False, "aws CLI not on PATH"))
         else:
-            cmd = ["aws", "sts", "get-caller-identity"]
-            if profile and profile != "default":
-                cmd.extend(["--profile", profile])
-            try:
-                result = subprocess.run(
-                    cmd, capture_output=True, text=True, timeout=15
+            checks.append(
+                Check(
+                    "content S3 (video staging)",
+                    False,
+                    "CONTENT_S3_BUCKET not set — video gen will fail",
                 )
-            except Exception as exc:  # noqa: BLE001
-                checks.append(Check("aws", False, str(exc)))
-            else:
-                if result.returncode == 0:
-                    checks.append(Check("aws", True, f"profile={profile}"))
-                else:
-                    err = (result.stderr or result.stdout or "").strip()
-                    checks.append(
-                        Check("aws", False, f"profile={profile} · {err[:140]}")
-                    )
+            )
+    except Exception as exc:  # noqa: BLE001
+        checks.append(Check("content S3 (video staging)", False, str(exc)))
+
+    checks.append(
+        Check(
+            "DutyCall drive bucket",
+            bool(DUTYCALL_S3_BUCKET),
+            DUTYCALL_S3_BUCKET
+            or "AWS_DUTYCALL_S3_BUCKET_ARN not set (publish will fail)",
+        )
+    )
+    checks.append(
+        Check(
+            "Private folder id",
+            bool(DUTYCALL_PRIVATE_FOLDER),
+            DUTYCALL_PRIVATE_FOLDER
+            or "AWS_DUTYCALL_PRIVATE_FOLDER unset (private publish disabled)",
+        )
+    )
+    checks.append(
+        Check(
+            "S3 bucket (legacy/content)",
+            bool(S3_BUCKET),
+            S3_BUCKET or "RALLY_S3_BUCKET not set (optional staging)",
+        )
+    )
 
     try:
         OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
         writable = os.access(OUTPUT_DIR, os.W_OK)
-        detail = str(OUTPUT_DIR)
     except OSError as exc:
         writable = False
         detail = str(exc)
-    checks.append(Check("projects dir", writable, detail))
+    else:
+        detail = str(OUTPUT_DIR)
+    checks.append(Check("output dir", writable, detail))
+
+    checks.append(
+        Check(
+            "iOS compress script",
+            COMPRESS_SCRIPT_IOS.is_file(),
+            str(COMPRESS_SCRIPT_IOS),
+        )
+    )
+    checks.append(
+        Check(
+            "step prompts",
+            STEP_PROMPTS_PATH.is_file(),
+            str(STEP_PROMPTS_PATH),
+        )
+    )
+    checks.append(
+        Check(
+            "SKILL.md",
+            SKILL_PATH.is_file(),
+            str(SKILL_PATH),
+        )
+    )
     return checks

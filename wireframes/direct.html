@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Rally · Direct</title>
+<style>
+  :root {
+    --bg: #0d0e14;
+    --panel: #12131a;
+    --ink: #e8e8e8;
+    --mute: #8b8d98;
+    --line: rgba(255,255,255,.08);
+    --teal: #2dd4bf;
+    --green: #37BD39;
+    --pink: #e91e63;
+    --phone: 9 / 16;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%;
+    background: var(--bg); color: var(--ink);
+    font: 13px/1.4 ui-sans-serif, system-ui, -apple-system, sans-serif;
+  }
+  button, input { font: inherit; color: inherit; }
+  button { cursor: pointer; border: 0; background: none; }
+  .app {
+    height: 100%;
+    display: grid;
+    grid-template-rows: 48px 36px 1fr 72px;
+  }
+
+  /* ── chrome ── */
+  .top {
+    display: flex; align-items: center; gap: 12px;
+    padding: 0 14px;
+    border-bottom: 1px solid var(--line);
+    background: #0d0e14;
+  }
+  .brand { color: var(--green); font-weight: 700; letter-spacing: .04em; }
+  .name { font-weight: 600; }
+  .name span { color: var(--mute); font-weight: 400; margin-left: 8px; }
+  .spacer { flex: 1; }
+
+  /* ── pack = the timeline, playback order ── */
+  .pack {
+    display: flex; align-items: stretch;
+    border-bottom: 1px solid var(--line);
+    overflow-x: auto;
+  }
+  .clip {
+    flex: 1 1 0; min-width: 72px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 2px;
+    color: var(--mute);
+    border-right: 1px solid var(--line);
+    position: relative;
+  }
+  .clip .k { font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
+  .clip .s { font-size: 10px; }
+  .clip.is-on { color: var(--ink); background: rgba(45,212,191,.08); }
+  .clip.is-on::after {
+    content: ""; position: absolute; left: 12%; right: 12%; bottom: 0; height: 2px;
+    background: var(--teal);
+  }
+  .clip.is-ok .s { color: var(--green); }
+  .clip.is-lock { opacity: .35; cursor: default; }
+  .clip .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: #333; margin-top: 2px;
+  }
+  .clip.is-ok .dot { background: var(--green); }
+  .clip.is-on .dot { background: var(--teal); }
+
+  /* ── stage ── */
+  .stage {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1fr minmax(220px, 320px) 1fr;
+    align-items: stretch;
+    min-height: 0;
+    background: radial-gradient(ellipse at center, #1a1b2e 0%, #0d0e14 70%);
+  }
+  .rail {
+    padding: 16px 12px;
+    display: flex; flex-direction: column; gap: 10px;
+    min-height: 0; overflow: auto;
+  }
+  .rail.left { align-items: flex-end; }
+  .rail.right { align-items: flex-start; }
+  .phone-wrap {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    min-height: 0; padding: 8px 0 8px; gap: 6px;
+  }
+  .join {
+    display: flex; align-items: center; gap: 8px;
+    max-width: 280px; width: 100%;
+    background: #16171f; border: 1px solid var(--line); border-radius: 10px;
+    padding: 6px 8px; text-align: left; color: var(--ink);
+  }
+  .join .sw {
+    width: 22px; height: 36px; border-radius: 4px; flex: 0 0 auto;
+    border: 1px solid rgba(255,255,255,.12);
+  }
+  .join .j {
+    display: flex; flex-direction: column; gap: 1px; min-width: 0;
+  }
+  .join .j b { font-size: 11px; font-weight: 650; }
+  .join .j s { font-size: 10px; color: var(--mute); text-decoration: none; }
+  .join.is-loop { border-color: var(--teal); }
+  .join.is-cut .sw { opacity: .25; background: repeating-linear-gradient(
+    135deg, #222 0 4px, #333 4px 8px); }
+  .join.is-warn { border-color: #c9a227; }
+  .phone {
+    aspect-ratio: var(--phone);
+    height: min(68vh, 560px);
+    max-width: 100%;
+    border-radius: 18px;
+    overflow: hidden;
+    position: relative;
+    background: #111;
+    box-shadow: 0 18px 50px rgba(0,0,0,.55);
+    border: 1px solid rgba(255,255,255,.08);
+  }
+  .phone img, .phone .poster {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%; object-fit: cover;
+  }
+  .poster {
+    display: flex; align-items: center; justify-content: center;
+    color: var(--mute); font-size: 12px; text-align: center; padding: 24px;
+    background: #16171f;
+  }
+  .hotspot {
+    position: absolute; border: 1.5px dashed rgba(45,212,191,.7);
+    border-radius: 8px; cursor: pointer;
+  }
+  .hotspot span {
+    position: absolute; left: 0; top: -18px;
+    font-size: 10px; color: var(--teal); white-space: nowrap;
+  }
+  .badge {
+    position: absolute; top: 10px; left: 10px;
+    font-size: 10px; letter-spacing: .06em; text-transform: uppercase;
+    background: rgba(0,0,0,.55); padding: 4px 8px; border-radius: 6px;
+  }
+  .heart {
+    position: absolute; top: 8px; right: 8px;
+    width: 32px; height: 32px; border-radius: 50%;
+    background: var(--pink); color: #fff;
+  }
+
+  /* takes filmstrip under phone */
+  .takes {
+    display: flex; gap: 6px; margin-top: 8px; height: 52px;
+  }
+  .take {
+    width: 32px; height: 52px; border-radius: 5px;
+    background: #1c1d26; border: 2px solid transparent;
+    overflow: hidden;
+  }
+  .take.is-on { border-color: var(--teal); }
+  .take .t { font-size: 9px; color: var(--mute); text-align: center; padding-top: 18px; }
+
+  /* ── verb dock ── */
+  .dock {
+    border-top: 1px solid var(--line);
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 16px 14px;
+    background: #0d0e14;
+  }
+  .line {
+    flex: 1;
+    display: flex; align-items: center; gap: 8px;
+    background: #1a1a1a; border: 1px solid #2c2c2c; border-radius: 10px;
+    padding: 8px 10px;
+  }
+  .line input {
+    flex: 1; background: none; border: 0; outline: none;
+    font-size: 13px;
+  }
+  .line .who {
+    font-size: 11px; color: var(--teal);
+    background: rgba(45,212,191,.1); border-radius: 6px; padding: 3px 7px;
+    white-space: nowrap;
+  }
+  .go {
+    background: var(--green); color: #041; font-weight: 650;
+    padding: 10px 16px; border-radius: 10px; min-width: 7.5rem;
+  }
+  .ghost {
+    border: 1px solid #2c2c2c; padding: 10px 14px; border-radius: 10px; color: var(--ink);
+  }
+  .ok {
+    border: 1px solid var(--green); color: var(--green);
+    padding: 10px 14px; border-radius: 10px;
+  }
+
+  /* ── kit + frames as ambient rails, not forms ── */
+  .lbl { font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--mute); }
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: #1a1a1a; border: 1px solid #2c2c2c;
+    border-radius: 999px; padding: 4px 10px; font-size: 12px;
+  }
+  .chip.is-on { border-color: var(--teal); color: var(--teal); }
+  .chip .av {
+    width: 14px; height: 14px; border-radius: 50%; background: #2dd4bf55;
+  }
+  .stack { display: flex; flex-wrap: wrap; gap: 6px; justify-content: inherit; }
+  .card {
+    background: #16171f; border: 1px solid var(--line); border-radius: 10px;
+    padding: 8px; width: 72px; cursor: pointer;
+  }
+  .card img, .card .ph {
+    width: 56px; height: 92px; border-radius: 6px; object-fit: cover;
+    background: #222; display: block; margin: 0 auto 4px;
+  }
+  .card .c { font-size: 10px; text-align: center; color: var(--mute); }
+  .card.is-on { border-color: var(--teal); }
+  .hint { font-size: 11px; color: var(--mute); max-width: 180px; }
+  .note {
+    position: absolute; bottom: 86px; left: 50%; transform: translateX(-50%);
+    background: rgba(18,19,26,.92); border: 1px solid var(--line);
+    padding: 8px 12px; border-radius: 10px; font-size: 12px; color: var(--mute);
+    pointer-events: none; opacity: 0; transition: opacity .2s;
+    white-space: nowrap;
+  }
+  .note.show { opacity: 1; }
+  .cast {
+    position: absolute; z-index: 4;
+    background: #12131a; border: 1px solid var(--teal); border-radius: 10px;
+    padding: 8px; display: none; min-width: 140px;
+  }
+  .cast button { display: block; width: 100%; text-align: left; padding: 6px 8px; border-radius: 6px; }
+  .cast button:hover { background: #1a1a1a; }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="brand">DutyCall</div>
+    <div class="name">ah-6-littlebird <span>you’re directing takes, not writing a spec</span></div>
+    <div class="spacer"></div>
+    <button class="ghost" id="kitToggle" type="button">Kit</button>
+  </header>
+
+  <nav class="pack" id="pack"></nav>
+
+  <main class="stage">
+    <aside class="rail left" id="frames"></aside>
+    <div class="phone-wrap">
+      <button class="join" id="joinIn" type="button"></button>
+      <div class="phone" id="phone">
+        <div class="poster" id="poster">No frame yet</div>
+        <div class="badge" id="modeBadge">Frame</div>
+        <button class="heart" type="button" title="Heart this take">♥</button>
+        <div class="hotspot" id="hs0" style="display:none;left:42%;top:38%;width:28%;height:22%"><span id="hs0l"></span></div>
+        <div class="cast" id="cast"></div>
+      </div>
+      <button class="join" id="joinOut" type="button"></button>
+      <div class="takes" id="takes"></div>
+    </div>
+    <aside class="rail right" id="kit"></aside>
+  </main>
+
+  <footer class="dock">
+    <div class="line">
+      <span class="who" id="who">locked</span>
+      <input id="dir" placeholder="What happens in this take — one action, then sound." />
+    </div>
+    <button class="ghost" id="nudge" type="button">Nudge</button>
+    <button class="go" id="primary" type="button">Make take</button>
+    <button class="ok" id="approve" type="button">Approve</button>
+  </footer>
+</div>
+<div class="note" id="note"></div>
+
+<script>
+const PLAY = ["Preview","Rally","Message","Idle","Accept","Decline","Reschedule"];
+/* Replies only need Idle if their start join is pinned to it. Rally never does. */
+const JOIN_START = {
+  Rally: ["cut", "preview"],
+  Message: ["preview", "cut", "idle-rest"],
+  Idle: ["idle-rest"],
+  Accept: ["idle-last", "idle-rest", "cut", "preview"],
+  Decline: ["idle-last", "idle-rest", "cut", "preview"],
+  Reschedule: ["idle-last", "idle-rest", "cut", "preview"],
+};
+const JOIN_END = {
+  Rally: ["cut", "idle-rest"],
+  Message: ["idle-rest", "cut"],
+  Idle: ["loop"],
+  Accept: ["idle-rest", "cut"],
+  Decline: ["idle-rest", "cut"],
+  Reschedule: ["idle-rest", "cut"],
+};
+
+const kit = {
+  voices: [
+    { id: "eve", label: "Eve", role: "Pilot" },
+    { id: "leo", label: "Leo", role: "Crew" },
+  ],
+  sounds: ["rotor disc", "headset click", "desert wind", "no music"],
+};
+
+const clips = {
+  Preview: {
+    kind: "image", status: "ok",
+    frame: "Preview.png", frames: ["Preview.png"], takes: [],
+    line: "Full-frame still, night FOB, bird at rest.",
+  },
+  Rally: {
+    kind: "video", status: "work",
+    frame: "Preview.png",
+    frames: ["Preview.png", "Rally.start.png"],
+    takes: ["t1"],
+    startJoin: "preview", endJoin: "cut",
+    line: "Pilot on the skid climbs in. Camera locked.",
+    speaker: "eve",
+  },
+  Message: {
+    kind: "video", status: "empty",
+    frame: "Preview.png", frames: ["Preview.png"], takes: [],
+    startJoin: "preview", endJoin: "idle-rest",
+    line: "A gloved finger taps the radio. Camera locked.",
+    speaker: "eve",
+  },
+  Idle: {
+    kind: "video", status: "empty",
+    frame: null, frames: ["Preview.png"], takes: [],
+    startJoin: "idle-rest", endJoin: "loop",
+    line: "Rotors a slow disc. Beacon pulse. Camera locked.",
+  },
+  Accept: {
+    kind: "video", status: "empty",
+    frame: null, frames: ["Preview.png"], takes: [],
+    startJoin: "idle-last", endJoin: "idle-rest",
+    line: "Cyclic eases forward.",
+    speaker: "eve",
+  },
+  Decline: {
+    kind: "video", status: "empty",
+    frame: null, frames: ["Preview.png"], takes: [],
+    startJoin: "idle-last", endJoin: "idle-rest",
+    line: "Hand holds a fist.",
+    speaker: "eve",
+  },
+  Reschedule: {
+    kind: "video", status: "empty",
+    frame: null, frames: ["Preview.png"], takes: [],
+    startJoin: "idle-last", endJoin: "idle-rest",
+    line: "Altimeter tap, no altitude change.",
+    speaker: "eve",
+  },
+};
+
+let cur = "Rally";
+let kitOpen = true;
+let nudgeMode = false;
+
+function toast(t) {
+  const n = document.getElementById("note");
+  n.textContent = t; n.classList.add("show");
+  clearTimeout(toast._t); toast._t = setTimeout(() => n.classList.remove("show"), 1600);
+}
+
+function idleRest() {
+  return clips.Idle.frame || (clips.Message.endJoin === "idle-rest" && clips.Message.takes.length
+    ? "Message.last.png" : null);
+}
+function idleLast() {
+  return clips.Idle.takes.length ? "Idle.last.png" : idleRest();
+}
+function joinNeedsIdle(c) {
+  return [c.startJoin, c.endJoin].some(j => j === "idle-rest" || j === "idle-last");
+}
+function unlocked(id) {
+  if (id === "Preview") return true;
+  if (clips.Preview.status !== "ok") return false;
+  const c = clips[id];
+  if (id === "Idle" || id === "Rally" || id === "Message") return true;
+  /* Replies: free if start is a cut; otherwise wait for an Idle rest. */
+  if (c.startJoin === "cut" || c.startJoin === "preview") return true;
+  return Boolean(idleRest());
+}
+
+function renderPack() {
+  const el = document.getElementById("pack");
+  el.innerHTML = PLAY.map(id => {
+    const c = clips[id];
+    const lock = !unlocked(id);
+    const on = id === cur;
+    const st = lock ? "locked" : c.status === "ok" ? "approved" : c.takes.length ? "has take" : c.frame ? "framed" : "empty";
+    return `<button class="clip ${on?"is-on":""} ${c.status==="ok"?"is-ok":""} ${lock?"is-lock":""}" data-id="${id}" ${lock?"disabled":""}>
+      <span class="k">${id}</span><span class="s">${st}</span><span class="dot"></span>
+    </button>`;
+  }).join("");
+  el.querySelectorAll(".clip").forEach(b => b.onclick = () => { cur = b.dataset.id; render(); });
+}
+
+function swatch(name) {
+  const colors = {
+    "Preview.png": "#2a3344",
+    "IdleKeyframe.png": "#1e3a32",
+    "Rally.start.png": "#3a2430",
+    "Idle.last.png": "#1e3a32",
+    "Message.last.png": "#3a3020",
+  };
+  return colors[name] || "#222";
+}
+
+function startFrameOf(c) {
+  if (c.startJoin === "preview") return "Preview.png";
+  if (c.startJoin === "idle-rest") return idleRest();
+  if (c.startJoin === "idle-last") return idleLast();
+  if (c.startJoin === "cut") return c.frame || "Preview.png";
+  return c.frame;
+}
+function endFrameOf(c) {
+  if (c.endJoin === "loop") return startFrameOf(c);
+  if (c.endJoin === "idle-rest") return idleRest() || "Message.last.png";
+  return null; /* cut — no pin */
+}
+function joinLabel(kind, key) {
+  const map = {
+    cut: ["Cut · unique", "No pin. A hard cut is fine."],
+    preview: ["Starts on Preview", "Look lock is frame 1."],
+    "idle-rest": kind === "end"
+      ? ["Lands on Idle rest", "Last frame = Idle’s first. That’s the usual Message → Idle join."]
+      : ["Starts on Idle rest", "Same pose Idle loops on."],
+    "idle-last": ["Starts on Idle last", "Replies usually open here. Optional."],
+    loop: ["Loops · first = last", "Idle is a closed loop. Imagine pins both ends to the same still."],
+  };
+  return map[key] || [key, ""];
+}
+function cycleJoin(which) {
+  const c = clips[cur];
+  const opts = which === "in" ? JOIN_START[cur] : JOIN_END[cur];
+  if (!opts || opts.length < 2) {
+    toast(opts && opts[0] === "loop" ? "Idle stays a loop. First and last are the same still." : "This join is fixed.");
+    return;
+  }
+  const curKey = which === "in" ? c.startJoin : c.endJoin;
+  const next = opts[(opts.indexOf(curKey) + 1) % opts.length];
+  if (which === "in") {
+    c.startJoin = next;
+    c.frame = startFrameOf(c);
+  } else c.endJoin = next;
+  toast((which === "in" ? "In: " : "Out: ") + joinLabel(which === "in" ? "start" : "end", next)[0]);
+  render();
+}
+
+function renderJoins() {
+  const inn = document.getElementById("joinIn");
+  const out = document.getElementById("joinOut");
+  const c = clips[cur];
+  if (c.kind === "image") {
+    inn.style.display = out.style.display = "none";
+    return;
+  }
+  inn.style.display = out.style.display = "flex";
+  const sf = startFrameOf(c);
+  const ef = endFrameOf(c);
+  const [inTitle, inSub] = joinLabel("start", c.startJoin);
+  const [outTitle, outSub] = joinLabel("end", c.endJoin);
+  const inWarn = (c.startJoin === "idle-last" || c.startJoin === "idle-rest") && !idleRest() && cur !== "Idle" && cur !== "Message";
+  const outMint = c.endJoin === "idle-rest" && !clips.Idle.frame && cur === "Message";
+  inn.className = "join" + (c.startJoin === "cut" ? " is-cut" : "") + (inWarn ? " is-warn" : "");
+  out.className = "join" + (c.endJoin === "cut" ? " is-cut" : "") + (c.endJoin === "loop" ? " is-loop" : "");
+  inn.innerHTML = `<div class="sw" style="background:${swatch(sf)}"></div>
+    <div class="j"><b>${inTitle}</b><s>${inWarn ? "Idle rest doesn’t exist yet — make Message or Idle first." : inSub}</s></div>`;
+  out.innerHTML = `<div class="sw" style="background:${ef ? swatch(ef) : "#333"}"></div>
+    <div class="j"><b>${outTitle}</b><s>${outMint ? "Approving Message will mint Idle’s rest from this last frame." : outSub}</s></div>`;
+}
+
+function renderFrames() {
+  const c = clips[cur];
+  const el = document.getElementById("frames");
+  if (c.kind === "image") {
+    el.innerHTML = `<div class="lbl">Look lock</div><div class="hint">Preview is the poster. Rally can ignore smoothness. Message usually shouldn’t.</div>`;
+    return;
+  }
+  const extras = [];
+  if (idleRest()) extras.push(idleRest());
+  if (idleLast() && idleLast() !== idleRest()) extras.push(idleLast());
+  const frames = [...new Set([...(c.frames||[]), ...extras, c.frame].filter(Boolean))];
+  const active = startFrameOf(c) || c.frame;
+  el.innerHTML = `<div class="lbl">Start still</div>` +
+    frames.map(f => `<button class="card ${f===active?"is-on":""}" data-f="${f}">
+      <div class="ph" style="background:${swatch(f)}"></div>
+      <div class="c">${f.replace(".png","")}</div>
+    </button>`).join("") +
+    `<div class="hint">Joins above/below the phone are the continuity. Click them to pin or cut. Rally defaults to a cut.</div>`;
+  el.querySelectorAll(".card").forEach(b => b.onclick = () => {
+    c.frame = b.dataset.f;
+    c.startJoin = "cut";
+    toast("Unique start · cut in. Smoothness off.");
+    render();
+  });
+}
+
+function renderKit() {
+  const el = document.getElementById("kit");
+  if (!kitOpen) { el.innerHTML = ""; return; }
+  el.innerHTML = `
+    <div class="lbl">Cast · carries across clips</div>
+    <div class="stack">${kit.voices.map(v =>
+      `<button class="chip ${clips[cur].speaker===v.id?"is-on":""}" data-v="${v.id}">
+        <span class="av"></span>${v.role} · ${v.label}
+      </button>`).join("")}</div>
+    <div class="lbl" style="margin-top:8px">Room tone · tagged, not rewritten</div>
+    <div class="stack">${kit.sounds.map(s =>
+      `<span class="chip">${s}</span>`).join("")}</div>
+    <div class="hint">Drop a voice on a person in the frame. Sound tags compile into Sound: — you don’t retype them.</div>
+  `;
+  el.querySelectorAll("[data-v]").forEach(b => b.onclick = () => {
+    clips[cur].speaker = b.dataset.v;
+    toast("This line speaks as " + kit.voices.find(v => v.id===b.dataset.v).role);
+    render();
+  });
+}
+
+function renderPhone() {
+  const c = clips[cur];
+  const phone = document.getElementById("phone");
+  const poster = document.getElementById("poster");
+  const badge = document.getElementById("modeBadge");
+  const hs = document.getElementById("hs0");
+  if (c.takes.length) {
+    poster.style.display = "flex";
+    poster.style.background = swatch(c.frame);
+    poster.textContent = c.frame + "  →  " + c.takes[c.takes.length-1] + ".mp4";
+    badge.textContent = "Take";
+  } else if (c.frame) {
+    poster.style.display = "flex";
+    poster.style.background = swatch(c.frame);
+    poster.textContent = c.frame;
+    badge.textContent = "Frame";
+  } else {
+    poster.style.background = "#16171f";
+    poster.textContent = "No frame yet";
+    badge.textContent = "Empty";
+  }
+  const v = kit.voices.find(x => x.id === c.speaker);
+  if (c.kind === "video" && v && c.frame) {
+    hs.style.display = "block";
+    document.getElementById("hs0l").textContent = v.role + " · " + v.label;
+  } else hs.style.display = "none";
+
+  const takes = document.getElementById("takes");
+  takes.innerHTML = c.takes.map((t,i) =>
+    `<div class="take ${i===c.takes.length-1?"is-on":""}"><div class="t">${t}</div></div>`
+  ).join("") + (c.kind==="video" && c.takes.length ? "" : "");
+}
+
+function renderDock() {
+  const c = clips[cur];
+  const who = document.getElementById("who");
+  const dir = document.getElementById("dir");
+  const primary = document.getElementById("primary");
+  const nudge = document.getElementById("nudge");
+  const approve = document.getElementById("approve");
+  const v = kit.voices.find(x => x.id === c.speaker);
+
+  if (c.kind === "image") {
+    who.textContent = "still";
+    dir.value = c.line;
+    dir.placeholder = "What this poster is.";
+    primary.textContent = "Make still";
+    nudge.style.display = "none";
+    approve.style.display = c.frame ? "inline-flex" : "none";
+    return;
+  }
+
+  nudge.style.display = c.takes.length ? "inline-flex" : "none";
+  approve.style.display = c.takes.length ? "inline-flex" : "none";
+  who.textContent = v ? v.role : "locked";
+  if (nudgeMode) {
+    dir.placeholder = "e.g. rotors only — don’t recast the pilot";
+    primary.textContent = "Apply nudge";
+  } else {
+    dir.value = c.line;
+    dir.placeholder = c.takes.length
+      ? "One action. Or Nudge to change only one thing."
+      : "One action. Camera. Sound tags ride along.";
+    primary.textContent = c.takes.length ? "New take" : "Make take";
+  }
+}
+
+function render() {
+  renderPack(); renderFrames(); renderJoins(); renderKit(); renderPhone(); renderDock();
+}
+
+document.getElementById("kitToggle").onclick = () => { kitOpen = !kitOpen; render(); };
+document.getElementById("joinIn").onclick = () => cycleJoin("in");
+document.getElementById("joinOut").onclick = () => cycleJoin("out");
+
+document.getElementById("primary").onclick = () => {
+  const c = clips[cur];
+  const text = document.getElementById("dir").value.trim();
+  if (c.kind === "image") {
+    c.line = text || c.line;
+    c.frame = "Preview.png";
+    toast("Still locked. That’s the look for the whole pack.");
+  } else if (nudgeMode) {
+    if (!text) { toast("Say the one thing to change."); return; }
+    const n = c.takes.length + 1;
+    c.takes.push("t" + n + "′");
+    nudgeMode = false;
+    toast("Edited the last take. Imagine got a delta, not a rewrite.");
+  } else {
+    c.line = text || c.line;
+    c.frame = startFrameOf(c) || c.frame || "Preview.png";
+    const n = c.takes.length + 1;
+    c.takes.push("t" + n);
+    c.status = "work";
+    if (cur === "Message" && c.endJoin === "idle-rest" && !clips.Idle.frame) {
+      clips.Idle.frame = "Message.last.png";
+      clips.Idle.frames = ["Message.last.png", "Preview.png"];
+      toast("Take " + n + " · last frame is now Idle’s rest.");
+    } else if (cur === "Idle") {
+      clips.Idle.frame = c.frame;
+      toast("Take " + n + " · loop pinned, first = last.");
+    } else {
+      toast("Take " + n + " · 1-line brief + this frame + kit.");
+    }
+  }
+  render();
+};
+
+document.getElementById("nudge").onclick = () => {
+  nudgeMode = true;
+  const dir = document.getElementById("dir");
+  dir.value = "";
+  dir.placeholder = "e.g. rotors only — don’t recast the pilot";
+  dir.focus();
+  document.getElementById("primary").textContent = "Apply nudge";
+  toast("Nudge edits the take. Don’t restate the world.");
+};
+
+document.getElementById("approve").onclick = () => {
+  const c = clips[cur];
+  c.status = "ok";
+  if (cur === "Message" && c.endJoin === "idle-rest") {
+    clips.Idle.frame = clips.Idle.frame || "Message.last.png";
+  }
+  const prefer = cur === "Message" ? "Idle"
+    : cur === "Idle" ? "Accept"
+    : cur === "Preview" ? "Rally"
+    : null;
+  const next = (prefer && unlocked(prefer) && clips[prefer].status !== "ok" && prefer)
+            || PLAY.find(id => unlocked(id) && clips[id].status !== "ok");
+  toast(cur === "Message" && c.endJoin === "idle-rest"
+    ? "Message approved · Idle rest is this last frame. Loop it next."
+    : cur + " approved · kit carries forward");
+  if (next) cur = next;
+  render();
+};
+
+document.getElementById("hs0").onclick = (e) => {
+  const box = document.getElementById("cast");
+  box.style.display = "block";
+  box.style.left = e.offsetX + 40 + "px";
+  box.style.top = e.offsetY + 80 + "px";
+  box.innerHTML = kit.voices.map(v =>
+    `<button data-v="${v.id}">${v.role} · ${v.label}</button>`
+  ).join("");
+  box.querySelectorAll("button").forEach(b => b.onclick = () => {
+    clips[cur].speaker = b.dataset.v;
+    box.style.display = "none";
+    toast("Cast on the person in frame — not in the prompt");
+    render();
+  });
+};
+
+document.getElementById("dir").addEventListener("input", (e) => {
+  if (!nudgeMode) clips[cur].line = e.target.value;
+});
+
+render();
+</script>
+</body>
+</html>

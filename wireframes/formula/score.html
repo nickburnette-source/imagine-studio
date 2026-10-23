@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Idea A · The Score</title>
+<style>
+  :root {
+    --bg: #0d0e14; --panel: #12131a; --ink: #e8e8e8; --mute: #8b8d98;
+    --line: rgba(255,255,255,.08); --teal: #2dd4bf; --green: #37BD39;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink);
+    font: 13px/1.4 ui-sans-serif, system-ui, -apple-system, sans-serif; }
+  button, textarea { font: inherit; color: inherit; }
+  button { cursor: pointer; border: 0; background: none; }
+  .app { height: 100%; display: grid; grid-template-rows: 44px 34px 1fr; }
+  .top, .pack {
+    display: flex; align-items: center; border-bottom: 1px solid var(--line);
+    padding: 0 14px; gap: 10px;
+  }
+  .brand { color: var(--green); font-weight: 700; }
+  .back { color: var(--mute); }
+  .pack { padding: 0; }
+  .clip { flex: 1; text-align: center; padding: 6px 0; color: var(--mute);
+    border-right: 1px solid var(--line); font-size: 10px; letter-spacing: .08em;
+    text-transform: uppercase; }
+  .clip.on { color: var(--ink); background: rgba(45,212,191,.08);
+    box-shadow: inset 0 -2px 0 var(--teal); }
+  .body { display: grid; grid-template-columns: 120px 1fr minmax(340px, 420px); min-height: 0; }
+  .rail { padding: 12px; border-right: 1px solid var(--line); overflow: auto; }
+  .rail:last-child { border-right: 0; border-left: 1px solid var(--line); }
+  .lbl { font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--mute); }
+  .thumb { width: 64px; aspect-ratio: 9/16; border-radius: 8px; margin: 6px 0;
+    background: linear-gradient(160deg,#2a2030,#1a3040); border: 1px solid var(--line); }
+  .stage { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 0; }
+  .surf { display: flex; background: #16171f; border: 1px solid var(--line); border-radius: 11px; padding: 3px; margin-bottom: 8px; }
+  .surf b { padding: 6px 18px; border-radius: 8px; font-size: 12px; font-weight: 700; color: var(--mute); }
+  .surf b.on { background: #1c2430; color: var(--ink); }
+  .phone { width: min(42vh, 240px); aspect-ratio: 9/16; border-radius: 16px;
+    background: linear-gradient(180deg,#1c2838,#0e1218); border: 1px solid var(--line);
+    box-shadow: 0 16px 40px #0008; position: relative; overflow: hidden; }
+  .phone span { position: absolute; left: 10px; bottom: 12px; font-size: 11px; color: #fff9; }
+  .score { display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; min-height: 0; overflow: auto; }
+  .tokens { display: flex; flex-wrap: wrap; gap: 6px; }
+  .tok {
+    display: inline-flex; align-items: center; gap: 6px;
+    border: 1px solid #2c2c2c; background: #1a1a1a; border-radius: 999px;
+    padding: 5px 10px; font-size: 11px; letter-spacing: .04em;
+  }
+  .tok .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--teal); }
+  .tok.mute { opacity: .4; text-decoration: line-through; }
+  .tok.mute .dot { background: #555; }
+  .tok.hot { border-color: var(--teal); color: var(--teal); }
+  .tok.open { background: rgba(45,212,191,.12); border-color: var(--teal); }
+  .beat {
+    flex: 1; min-height: 140px; background: #16171f; border: 1px solid var(--line);
+    border-radius: 12px; padding: 10px 12px; resize: none; outline: none;
+  }
+  .sheet {
+    background: #0f1016; border: 1px solid var(--line); border-radius: 12px;
+    padding: 10px 12px; font-size: 12px; line-height: 1.55; color: #cfd1d8;
+  }
+  .sheet b { font-weight: 650; }
+  .sheet .c { color: #8ab4ff; } .sheet .s { color: var(--teal); }
+  .sheet .h { color: #e8c27a; } .sheet .n { color: #c3a6ff; }
+  .sheet .k { color: #9ee37d; }
+  .sheet.dim span { opacity: .25; }
+  .drawer {
+    background: #16171f; border: 1px solid rgba(45,212,191,.35); border-radius: 12px;
+    padding: 10px 12px;
+  }
+  .drawer textarea { width: 100%; min-height: 72px; background: #1a1a1a; border: 1px solid #2c2c2c;
+    border-radius: 8px; padding: 8px; outline: none; resize: vertical; }
+  .row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .tiny { font-size: 11px; color: var(--mute); }
+  .go { background: var(--green); color: #041; font-weight: 700; padding: 10px; border-radius: 10px; width: 100%; margin-top: 4px; }
+  .ghost { border: 1px solid #2c2c2c; padding: 8px 10px; border-radius: 8px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="top">
+    <a class="back" href="index.html">← ideas</a>
+    <span class="brand">DutyCall</span>
+    <span>Friendly Asset Retrieval</span>
+    <span style="margin-left:auto;color:var(--teal);font-size:11px;letter-spacing:.08em;">IDEA A · THE SCORE</span>
+  </div>
+  <div class="pack">
+    <div class="clip">Preview</div>
+    <div class="clip">Rally</div>
+    <div class="clip">Message</div>
+    <div class="clip">Idle</div>
+    <div class="clip on">Accept</div>
+    <div class="clip">Decline</div>
+    <div class="clip">Reschedule</div>
+  </div>
+  <div class="body">
+    <div class="rail">
+      <div class="lbl">Stills</div>
+      <div class="thumb"></div>
+      <div class="thumb" style="background:linear-gradient(160deg,#203040,#402020)"></div>
+      <div class="tiny">Pick a still, then pin it on the phone overlay — Start or Look. Not a prompt box.</div>
+    </div>
+    <div class="stage">
+      <div class="surf">
+        <b id="stillBtn">Still</b>
+        <b id="takeBtn" class="on">Take</b>
+      </div>
+      <div class="phone"><span>Accept · take</span></div>
+    </div>
+    <div class="score">
+      <div class="row">
+        <div class="lbl">Score · compiled at send</div>
+        <span class="tiny" id="surfLab">TAKE</span>
+      </div>
+      <div class="tokens" id="tokens"></div>
+      <div class="tiny">Mute a token to drop it from the send. Click to override auto copy. You only write the beat.</div>
+      <textarea class="beat" id="beat">The soldiers have rappelled onto the roof. Ball-cap holds a subtle detonator. They take cover, then the charges blow.</textarea>
+      <div class="drawer" id="drawer" hidden>
+        <div class="row">
+          <b id="dTitle">Start frame</b>
+          <span>
+            <button class="ghost" id="dMute">Mute</button>
+            <button class="ghost" id="dReset">Reset auto</button>
+            <button class="ghost" id="dClose">Close</button>
+          </span>
+        </div>
+        <p class="tiny" id="dHint"></p>
+        <textarea id="dText"></textarea>
+      </div>
+      <div class="lbl">Imagine gets</div>
+      <div class="sheet" id="sheet"></div>
+      <button class="go" id="go">Make take</button>
+    </div>
+  </div>
+</div>
+<script>
+const STILL = [
+  { id:'concept', lab:'Concept', cls:'c', auto:'Concept: elite squad abducts a friend for a gaming session.', on:true },
+  { id:'look', lab:'Look', cls:'h', auto:'', on:false },
+  { id:'seed', lab:'Start', cls:'s', auto:'No pose seed. <IMAGE_0> is a blank plate. Invent pose from the shot.', on:true },
+  { id:'refs', lab:'Look stills', cls:'s', auto:'<IMAGE_1> Preview.png, <IMAGE_2> Rally.start.png — faces, gear only. Not pose.', on:true },
+  { id:'shot', lab:'Beat', cls:'n', auto:'', on:true, beat:true },
+  { id:'constraints', lab:'Still rules', cls:'k', auto:'Single still, 9:16. No captions or logos.', on:true },
+];
+const TAKE = [
+  { id:'concept', lab:'Concept', cls:'c', auto:'Concept: elite squad abducts a friend for a gaming session.', on:true },
+  { id:'look', lab:'Look', cls:'h', auto:'', on:false },
+  { id:'seed', lab:'Start', cls:'s', auto:'No start-frame pin. Reference-to-video. Invent the opening.', on:true },
+  { id:'refs', lab:'Look stills', cls:'s', auto:'<IMAGE_0> Preview.png — faces, gear only. New pose from the shot.', on:true },
+  { id:'shot', lab:'Beat', cls:'n', auto:'', on:true, beat:true },
+  { id:'sound', lab:'Sound', cls:'k', auto:'Sound: rotors, radio, rooftop wind.', on:true },
+  { id:'voice', lab:'Voice', cls:'k', auto:'', on:false },
+  { id:'end', lab:'Last frame', cls:'s', auto:'', on:false },
+  { id:'duration', lab:'Length', cls:'k', auto:'Duration: 6 seconds.', on:true },
+];
+const edits = { still:{}, take:{} };
+let surf = 'take';
+let openId = null;
+
+function toks(){ return surf === 'still' ? STILL : TAKE; }
+function val(t){
+  if (t.beat) return document.getElementById('beat').value.trim();
+  return (edits[surf][t.id] ?? t.auto).trim();
+}
+function renderTokens(){
+  const el = document.getElementById('tokens');
+  el.innerHTML = toks().map(t =>
+    `<button class="tok ${t.on?'':'mute'} ${openId===t.id?'open':''} ${t.id}" data-id="${t.id}">
+      <i class="dot"></i>${t.lab}</button>`
+  ).join('');
+  el.querySelectorAll('.tok').forEach(b => b.onclick = () => {
+    const t = toks().find(x => x.id === b.dataset.id);
+    if (t.beat) { document.getElementById('beat').focus(); return; }
+    openId = openId === t.id ? null : t.id;
+    render();
+  });
+}
+function renderSheet(){
+  const parts = toks().filter(t => t.on && val(t)).map(t =>
+    `<span class="${t.cls}" data-id="${t.id}">${esc(val(t))}</span>`
+  );
+  const sheet = document.getElementById('sheet');
+  sheet.innerHTML = parts.join(' <b style="color:#2dd4bf">+</b> ') || '<i style="color:#8b8d98">Nothing to send.</i>';
+  sheet.querySelectorAll('span').forEach(s => {
+    s.onmouseenter = () => {
+      document.querySelectorAll('.tok').forEach(t => t.classList.toggle('hot', t.dataset.id === s.dataset.id));
+    };
+    s.onmouseleave = () => document.querySelectorAll('.tok').forEach(t => t.classList.remove('hot'));
+  });
+}
+function renderDrawer(){
+  const d = document.getElementById('drawer');
+  const t = toks().find(x => x.id === openId);
+  if (!t || t.beat) { d.hidden = true; return; }
+  d.hidden = false;
+  document.getElementById('dTitle').textContent = t.lab;
+  document.getElementById('dHint').textContent = t.on
+    ? (edits[surf][t.id] != null ? 'Override — this is what compiles.' : 'Auto. Mute to drop, or type to override.')
+    : 'Muted — not in the send.';
+  document.getElementById('dText').value = val(t);
+}
+function render(){
+  document.getElementById('surfLab').textContent = surf.toUpperCase();
+  document.getElementById('go').textContent = surf === 'still' ? 'Make still' : 'Make take';
+  document.getElementById('stillBtn').classList.toggle('on', surf==='still');
+  document.getElementById('takeBtn').classList.toggle('on', surf==='take');
+  renderTokens(); renderDrawer(); renderSheet();
+}
+function esc(s){ return s.replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+
+document.getElementById('stillBtn').onclick = () => { openId=null; surf='still'; render(); };
+document.getElementById('takeBtn').onclick = () => { openId=null; surf='take'; render(); };
+document.getElementById('beat').oninput = renderSheet;
+document.getElementById('dText').oninput = e => { if (openId) edits[surf][openId] = e.target.value; renderSheet(); };
+document.getElementById('dClose').onclick = () => { openId=null; render(); };
+document.getElementById('dReset').onclick = () => { if (openId) delete edits[surf][openId]; render(); };
+document.getElementById('dMute').onclick = () => {
+  const t = toks().find(x => x.id === openId); if (t) t.on = !t.on; render();
+};
+document.getElementById('go').onclick = () => {
+  alert((surf==='still'?'Make still':'Make take') + ' would send:\n\n' +
+    toks().filter(t=>t.on && val(t)).map(val).join('\n\n'));
+};
+render();
+</script>
+</body>
+</html>

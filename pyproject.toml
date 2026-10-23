@@ -1,7 +1,7 @@
 [project]
-name = "imagine-studio"
+name = "rally-builder"
 version = "0.1.0"
-description = "Local studio for Grok Imagine images and video"
+description = "Local GUI for gated DutyCall Rally skin generation"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
@@ -16,7 +16,7 @@ dependencies = [
 ]
 
 [project.scripts]
-imagine-studio = "app.main:main"
+rally-builder = "app.main:main"
 content-store = "content_store.__main__:main"
 
 [build-system]

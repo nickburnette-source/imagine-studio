@@ -9,11 +9,13 @@ storage. Use a lifecycle rule to expire `staging/` after 1 day.
 ## Setup
 
 ```bash
-# .env
+# .env — any AWS account. See ../.env.example
 CONTENT_S3_BUCKET=your-bucket-name
 CONTENT_S3_PREFIX=staging/
 AWS_REGION=us-east-1
-AWS_PROFILE=default   # if you use named profiles / SSO
+AWS_ACCESS_KEY_ID=...
+AWS_SECRET_ACCESS_KEY=...
+# AWS_PROFILE=default   # only if you use a named profile instead of keys
 ```
 
 IAM on the bucket (minimum):

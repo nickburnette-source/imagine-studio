@@ -1,0 +1,103 @@
+# Template: Craft
+# Photoreal vehicle / machine (aircraft, car, ship, rig).
+# Image-to-video from a locked still — motion of things already in frame.
+
+id: craft
+label: Craft
+description: >-
+  Photoreal vehicle or machine. Rally/Message start on Preview; reactions
+  start on Idle’s last frame. No invented dust, people, or debris.
+
+loop_rule: >-
+  Frame 1 and the last frame match on Idle. Story clips: one motion, camera
+  locked or one move. Do not add matter that is not in the still.
+
+concept_label: Subject
+
+steps:
+  Preview:
+    label: Preview
+    role: look lock still
+    outputs: [Preview.png]
+    kind: image
+    start: none
+    end: none
+    base_prompt: >-
+      Photoreal full-frame still of the craft, vertical 9:16. Real metal,
+      real ground, readable silhouette. No text, no logos invented.
+    custom_placeholder: "e.g. AH-6 on a concrete night pad, rotors still"
+
+  Idle:
+    label: Idle
+    role: rest loop
+    outputs: [IdleKeyframe.png, Idle.mp4]
+    kind: idle
+    keyframe: preview
+    start: idle
+    end: self
+    loop: true
+    still_prompt: >-
+      Same craft, rest on its landing gear. Same camera and lighting.
+    base_prompt: >-
+      Tiny rest life — a light blink, heat shimmer, a blade that barely nods.
+    custom_placeholder: "e.g. IR strobe ticks, exhaust ticks as metal cools"
+
+  Rally:
+    label: Rally
+    role: send
+    outputs: [Rally.mp4]
+    kind: video
+    keyframe: preview
+    start: preview
+    end: hold
+    cuts_to: Idle
+    base_prompt: One in-frame spool-up / we're-going beat.
+    custom_placeholder: "e.g. rotors spool, skids stay planted, Sound: turbine"
+
+  Message:
+    label: Message
+    role: incoming
+    outputs: [Message.mp4]
+    kind: video
+    keyframe: preview
+    start: preview
+    end: hold
+    cuts_to: Idle
+    base_prompt: One in-frame incoming-call beat.
+    custom_placeholder: "e.g. visor turns, a finger on comms, Sound: headset"
+
+  Accept:
+    label: Accept
+    role: "yes"
+    outputs: [Accept.mp4]
+    kind: video
+    keyframe: idle_last
+    start: idle_last
+    end: hold
+    cuts_to: Idle
+    base_prompt: One in-frame commit beat.
+    custom_placeholder: "e.g. collective up a few inches, Sound: rotor bite"
+
+  Decline:
+    label: Decline
+    role: "no"
+    outputs: [Decline.mp4]
+    kind: video
+    keyframe: idle_last
+    start: idle_last
+    end: hold
+    cuts_to: Idle
+    base_prompt: One in-frame abort / stand-down beat.
+    custom_placeholder: "e.g. hand backs off the collective, Sound: RTB on net"
+
+  Adjust:
+    label: Reschedule
+    role: wait
+    outputs: [Reschedule.mp4]
+    kind: video
+    keyframe: idle_last
+    start: idle_last
+    end: hold
+    cuts_to: Idle
+    base_prompt: One in-frame wait-one beat.
+    custom_placeholder: "e.g. rotors at idle RPM, a fist hold, Sound: wait one"

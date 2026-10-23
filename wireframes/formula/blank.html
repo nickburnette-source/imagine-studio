@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Rally · blank</title>
+<style>
+  :root {
+    --bg: #0d0e14;
+    --ink: #e8e8e8;
+    --mute: #8b8d98;
+    --line: rgba(255,255,255,.08);
+    --teal: #2dd4bf;
+    --green: #37BD39;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%;
+    background: var(--bg); color: var(--ink);
+    font: 13px/1.4 ui-sans-serif, system-ui, -apple-system, sans-serif;
+  }
+  button { font: inherit; color: inherit; cursor: pointer; border: 0; background: none; }
+  .app {
+    height: 100%;
+    display: grid;
+    grid-template-rows: 48px 36px 1fr;
+  }
+  .top {
+    display: flex; align-items: center; gap: 12px;
+    padding: 0 14px;
+    border-bottom: 1px solid var(--line);
+    background: #0d0e14;
+  }
+  .brand { color: var(--green); font-weight: 700; letter-spacing: .04em; }
+  .name { font-weight: 600; }
+  .name span { color: var(--mute); font-weight: 400; margin-left: 8px; }
+  .spacer { flex: 1; }
+  .ico {
+    width: 28px; height: 28px; border-radius: 8px;
+    border: 1px solid var(--line); color: var(--mute);
+    display: grid; place-items: center; font-size: 14px;
+  }
+  .pack {
+    display: flex; align-items: stretch;
+    border-bottom: 1px solid var(--line);
+    overflow-x: auto;
+  }
+  .clip {
+    flex: 1 1 0; min-width: 72px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 2px;
+    color: var(--mute);
+    border-right: 1px solid var(--line);
+    position: relative;
+  }
+  .clip .k { font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
+  .clip .s { font-size: 10px; }
+  .clip.is-on { color: var(--ink); background: rgba(45,212,191,.08); }
+  .clip.is-on::after {
+    content: ""; position: absolute; left: 12%; right: 12%; bottom: 0; height: 2px;
+    background: var(--teal);
+  }
+  .clip.is-ok .s { color: var(--green); }
+  .clip.is-lock { opacity: .35; }
+  .clip .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: #333; margin-top: 2px;
+  }
+  .clip.is-ok .dot { background: var(--green); }
+  .clip.is-on .dot { background: var(--teal); }
+  .blank { min-height: 0; background: var(--bg); }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <span class="brand">← DutyCall</span>
+    <div class="name">Friendly Asset Retrieval <span>Accept</span></div>
+    <div class="spacer"></div>
+    <button class="ico" title="activity">↻</button>
+    <button class="ico" title="settings">⚙</button>
+  </header>
+  <nav class="pack" id="pack"></nav>
+  <main class="blank"></main>
+</div>
+<script>
+const steps = [
+  { k: 'Preview', s: 'approved', ok: true },
+  { k: 'Rally', s: 'approved', ok: true },
+  { k: 'Message', s: 'approved', ok: true },
+  { k: 'Idle', s: 'approved', ok: true },
+  { k: 'Accept', s: 'framed', on: true },
+  { k: 'Decline', s: 'framed' },
+  { k: 'Reschedule', s: 'framed' },
+];
+const pack = document.getElementById('pack');
+function render(on) {
+  pack.innerHTML = steps.map((st, i) => `
+    <button class="clip${st.ok ? ' is-ok' : ''}${i === on ? ' is-on' : ''}" data-i="${i}">
+      <span class="k">${st.k}</span>
+      <span class="s">${st.s}</span>
+      <span class="dot"></span>
+    </button>`).join('');
+  pack.querySelectorAll('.clip').forEach(b => {
+    b.onclick = () => {
+      const i = +b.dataset.i;
+      document.querySelector('.name span').textContent = steps[i].k;
+      render(i);
+    };
+  });
+}
+render(4);
+</script>
+</body>
+</html>

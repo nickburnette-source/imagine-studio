@@ -1,0 +1,99 @@
+# Deprecated shim — defaults now live under defaults/templates/.
+# Kept so older code paths that open this path still resolve to Character.
+# Prefer: defaults/templates/character.yaml | scene.yaml
+
+id: character
+label: Character
+description: Shim → templates/character.yaml
+
+loop_rule: >-
+  Frame 1 and the last frame match. Small reversible motion only.
+
+concept_label: Subject
+
+steps:
+  Preview:
+    label: Preview
+    role: look lock still
+    outputs: [Preview.png]
+    kind: image
+    start: none
+    end: none
+    base_prompt: >-
+      Full-frame still of the subject, vertical 9:16.
+    custom_placeholder: "e.g. neon rim light, big grin"
+
+  Idle:
+    label: Idle
+    role: rest loop
+    outputs: [IdleKeyframe.png, Idle.mp4]
+    kind: idle
+    keyframe: preview
+    start: idle
+    end: self
+    loop: true
+    still_prompt: >-
+      Neutral rest pose of the same subject. Same camera and lighting.
+    base_prompt: >-
+      Tiny reversible life — breath, sway, or blink.
+    custom_placeholder: "e.g. slow blink + micro sway"
+
+  Rally:
+    label: Rally
+    role: send
+    outputs: [Rally.mp4]
+    kind: video
+    keyframe: preview
+    start: preview
+    end: hold
+    cuts_to: Idle
+    base_prompt: One cinematic "we're going" moment.
+    custom_placeholder: "e.g. points at camera, shouts let's go, confetti"
+
+  Message:
+    label: Message
+    role: incoming
+    outputs: [Message.mp4]
+    kind: video
+    keyframe: preview
+    start: preview
+    end: hold
+    cuts_to: Idle
+    base_prompt: One cinematic incoming-call moment.
+    custom_placeholder: "e.g. snaps to look, wave, a shout from offscreen"
+
+  Accept:
+    label: Accept
+    role: "yes"
+    outputs: [Accept.mp4]
+    kind: video
+    keyframe: idle_last
+    start: idle_last
+    end: hold
+    cuts_to: Idle
+    base_prompt: One cinematic yes / we're-in moment.
+    custom_placeholder: "e.g. double thumbs up, leaps, 'I'm in'"
+
+  Decline:
+    label: Decline
+    role: "no"
+    outputs: [Decline.mp4]
+    kind: video
+    keyframe: idle_last
+    start: idle_last
+    end: hold
+    cuts_to: Idle
+    base_prompt: One cinematic abort / no-go moment.
+    custom_placeholder: "e.g. shake-off, walks away, 'can't make it'"
+
+  Adjust:
+    label: Reschedule
+    role: wait
+    outputs: [Reschedule.mp4]
+    kind: video
+    keyframe: idle_last
+    start: idle_last
+    end: hold
+    cuts_to: Idle
+    base_prompt: One cinematic hold / wait-one moment.
+    custom_placeholder: "e.g. checks a watch, 'give me ten'"

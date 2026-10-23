@@ -1,0 +1,103 @@
+# Template: Scene
+# Environment / prop / tableau rally skin (no character face required).
+#
+# Prompts describe CLIP CONNECTIONS (start / end / cut), not product copy.
+# Do not mention apps, invites, UI chrome, phones, or "skins".
+
+id: scene
+label: Scene
+description: >-
+  Environment, terminal, object, or tableau. Rally & Message start on Preview
+  and land on Idle rest; reactions start on Idle's last frame.
+
+loop_rule: >-
+  Frame 1 and the last frame match. Small reversible motion only.
+
+concept_label: Subject
+
+steps:
+  Preview:
+    label: Preview
+    role: look lock still
+    outputs: [Preview.png]
+    kind: image
+    start: none
+    end: none
+    base_prompt: >-
+      Full-frame still of the scene, vertical 9:16.
+    custom_placeholder: "e.g. green phosphor CRT, scanlines, blinking cursor"
+
+  Idle:
+    label: Idle
+    role: rest loop
+    outputs: [IdleKeyframe.png, Idle.mp4]
+    kind: idle
+    keyframe: preview
+    start: idle
+    end: self
+    loop: true
+    still_prompt: >-
+      Quiet rest state of the same scene. Same camera and lighting.
+    base_prompt: >-
+      Tiny reversible life — flicker, pulse, or drift.
+    custom_placeholder: "e.g. slow cursor blink, soft glow pulse"
+
+  Rally:
+    label: Rally
+    role: send
+    outputs: [Rally.mp4]
+    kind: video
+    keyframe: preview
+    start: preview
+    end: hold
+    cuts_to: Idle
+    base_prompt: One cinematic "we're going" moment.
+    custom_placeholder: "e.g. lights spool up, a command on the board"
+
+  Message:
+    label: Message
+    role: incoming
+    outputs: [Message.mp4]
+    kind: video
+    keyframe: preview
+    start: preview
+    end: hold
+    cuts_to: Idle
+    base_prompt: One cinematic incoming-call moment.
+    custom_placeholder: "e.g. headset crackle, a finger on comms"
+
+  Accept:
+    label: Accept
+    role: "yes"
+    outputs: [Accept.mp4]
+    kind: video
+    keyframe: idle_last
+    start: idle_last
+    end: hold
+    cuts_to: Idle
+    base_prompt: One cinematic yes / wheels-up moment.
+    custom_placeholder: "e.g. confirm flash, a lock clicks"
+
+  Decline:
+    label: Decline
+    role: "no"
+    outputs: [Decline.mp4]
+    kind: video
+    keyframe: idle_last
+    start: idle_last
+    end: hold
+    cuts_to: Idle
+    base_prompt: One cinematic abort / no-go moment.
+    custom_placeholder: "e.g. a light goes red, Sound: abort in the room"
+
+  Adjust:
+    label: Reschedule
+    role: wait
+    outputs: [Reschedule.mp4]
+    kind: video
+    keyframe: idle_last
+    start: idle_last
+    end: hold
+    cuts_to: Idle
+    base_prompt: One cinematic hold / wait-one moment.
+    custom_placeholder: "e.g. hold short, weather check, 'wait one'"

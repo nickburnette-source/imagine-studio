@@ -1,0 +1,98 @@
+# Single rally skeleton. Visual approach is invented by Grok into the beats.
+# Do not mention apps, invites, UI chrome, phones, or skins.
+
+id: rally
+label: Rally
+description: >-
+  Seven-clip rally pack. Grok invents tone and openings; Idle is the rest loop.
+
+loop_rule: >-
+  Idle loops. Story clips may open on Preview, Idle, or an invented still.
+
+concept_label: Concept
+
+steps:
+  Preview:
+    label: Preview
+    role: recognition still — the poster of this world at rest
+    outputs: [Preview.png]
+    kind: image
+    start: none
+    end: none
+    base_prompt: >-
+      Full-frame still of the subject at rest, vertical 9:16.
+    custom_placeholder: recognition still
+
+  Idle:
+    label: Idle
+    role: waiting — the rest loop while nobody has answered
+    outputs: [IdleKeyframe.png, Idle.mp4]
+    kind: idle
+    keyframe: preview
+    start: idle
+    end: self
+    loop: true
+    still_prompt: >-
+      Neutral rest of the same subject. Same camera and lighting.
+    base_prompt: >-
+      Tiny reversible life — breath, sway, or a small idle motion.
+    custom_placeholder: waiting loop
+
+  Rally:
+    label: Take
+    role: ""
+    outputs: [take.mp4]
+    kind: video
+    keyframe: none
+    start: none
+    end: none
+    base_prompt: ""
+    custom_placeholder: What happens in this shot
+
+  Message:
+    label: Message
+    role: incoming — the ping arriving; attention in-world
+    outputs: [Message.mp4]
+    kind: video
+    keyframe: preview
+    start: preview
+    end: hold
+    cuts_to: Idle
+    base_prompt: One incoming / attention moment from this opening.
+    custom_placeholder: the ping arriving
+
+  Accept:
+    label: Accept
+    role: "yes — I'm in; commit to what Rally started"
+    outputs: [Accept.mp4]
+    kind: video
+    keyframe: idle_last
+    start: idle_last
+    end: hold
+    cuts_to: Idle
+    base_prompt: One yes / commit moment from this opening.
+    custom_placeholder: yes, I'm in
+
+  Decline:
+    label: Decline
+    role: "no — can't make it; abort, stand-down, or roast"
+    outputs: [Decline.mp4]
+    kind: video
+    keyframe: idle_last
+    start: idle_last
+    end: hold
+    cuts_to: Idle
+    base_prompt: One no / abort / roast moment from this opening.
+    custom_placeholder: no
+
+  Adjust:
+    label: Reschedule
+    role: not now — wait-one; hold the plan without yes or no
+    outputs: [Reschedule.mp4]
+    kind: video
+    keyframe: idle_last
+    start: idle_last
+    end: hold
+    cuts_to: Idle
+    base_prompt: One wait-one moment from this opening.
+    custom_placeholder: not now

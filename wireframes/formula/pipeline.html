@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Idea C · Formula pipeline</title>
+<style>
+  :root {
+    --bg: #0d0e14;
+    --ink: #e8e8e8;
+    --mute: #8b8d98;
+    --line: rgba(255,255,255,.08);
+    --teal: #2dd4bf;
+    --green: #37BD39;
+    --gold: #e8c27a;
+    --blue: #8ab4ff;
+    --pink: #e9a6c9;
+    --orange: #f0a36b;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%;
+    background: var(--bg); color: var(--ink);
+    font: 13px/1.4 ui-sans-serif, system-ui, -apple-system, sans-serif;
+  }
+  button, input, textarea { font: inherit; color: inherit; }
+  button { cursor: pointer; border: 0; background: none; }
+  .app {
+    height: 100%;
+    display: grid;
+    grid-template-rows: 44px 32px 1fr;
+  }
+  .top, .pack {
+    display: flex; align-items: center;
+    border-bottom: 1px solid var(--line);
+    padding: 0 14px; gap: 10px;
+  }
+  .brand { color: var(--green); font-weight: 700; }
+  .back { color: var(--mute); text-decoration: none; }
+  .idea {
+    margin-left: auto; font-size: 11px; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--teal);
+  }
+  .pack { padding: 0; }
+  .clip {
+    flex: 1; text-align: center; padding: 7px 0; color: var(--mute);
+    border-right: 1px solid var(--line); font-size: 10px;
+    letter-spacing: .08em; text-transform: uppercase;
+  }
+  .clip.on {
+    color: var(--ink); background: rgba(45,212,191,.08);
+    box-shadow: inset 0 -2px 0 var(--teal);
+  }
+
+  .workspace {
+    display: grid;
+    grid-template-columns: 108px 1fr;
+    min-height: 0;
+  }
+  .catalog {
+    border-right: 1px solid var(--line);
+    padding: 10px 8px;
+    overflow: auto;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .lbl {
+    font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--mute);
+  }
+  .cat {
+    width: 100%; aspect-ratio: 9/16; border-radius: 8px;
+    border: 1px solid var(--line); position: relative; overflow: hidden;
+  }
+  .cat.is-pick { outline: 2px solid var(--teal); outline-offset: 2px; }
+  .cat .nm {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    font-size: 10px; text-align: center; padding: 4px;
+    background: linear-gradient(transparent, #000c); color: #fff;
+  }
+  .g1 { background: linear-gradient(160deg,#3a2a20,#1a2838); }
+  .g2 { background: linear-gradient(160deg,#203040,#402028); }
+  .g3 { background: linear-gradient(160deg,#1a2a22,#2a2018); }
+  .g4 { background: linear-gradient(160deg,#241828,#1a2030); }
+
+  .formula {
+    display: flex; flex-direction: column; min-height: 0; overflow: auto;
+    padding: 12px 16px 16px;
+  }
+  .formula-head {
+    display: flex; align-items: center; gap: 12px; margin-bottom: 12px;
+  }
+  .surf {
+    display: flex; background: #16171f; border: 1px solid var(--line);
+    border-radius: 11px; padding: 3px;
+  }
+  .surf b {
+    padding: 6px 16px; border-radius: 8px; font-size: 12px;
+    font-weight: 700; color: var(--mute);
+  }
+  .surf b.on { background: #1c2430; color: var(--ink); }
+  .formula-head .hint { color: var(--mute); font-size: 12px; }
+
+  .pipeline {
+    display: grid;
+    grid-template-columns: 168px 22px 1fr 22px 168px 22px 150px;
+    align-items: stretch;
+    gap: 0;
+    min-height: 280px;
+  }
+  .plus {
+    display: flex; align-items: center; justify-content: center;
+    color: var(--teal); font-size: 22px; font-weight: 700; opacity: .7;
+    user-select: none;
+  }
+  .plus.pulse { animation: plusPulse 1.8s ease-in-out infinite; }
+  @keyframes plusPulse {
+    0%, 100% { opacity: .35; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.12); }
+  }
+  .eq {
+    display: flex; align-items: center; justify-content: center;
+    color: var(--gold); font-size: 22px; font-weight: 700;
+  }
+
+  .stage-col {
+    background: #12131a; border: 1px solid var(--line); border-radius: 14px;
+    padding: 10px; display: flex; flex-direction: column; gap: 8px;
+  }
+  .stage-col h3 {
+    margin: 0; font-size: 10px; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--mute); font-weight: 650;
+  }
+  .stage-col.take-only.hide { display: none; }
+
+  /* Viewfinder socket — glass picks the still, bezel cycles the type */
+  .vf {
+    flex: 1; min-height: 210px;
+    border-radius: 12px;
+    background: #0b0c11;
+    border: 3px solid #2a2d38;
+    position: relative;
+    overflow: hidden;
+    box-shadow: inset 0 0 0 1px #111, 0 8px 24px #0006;
+  }
+  .vf.is-on { border-color: var(--teal); }
+  .vf.is-look { border-color: var(--gold); }
+  .vf.is-mute { opacity: .38; filter: grayscale(.6); }
+  .vf-glass {
+    position: absolute; inset: 22px 10px 36px;
+    border-radius: 6px; overflow: hidden; cursor: pointer;
+    background: repeating-linear-gradient(135deg, #16171c 0 6px, #1b1c22 6px 12px);
+  }
+  .vf-glass:hover { box-shadow: inset 0 0 0 2px var(--teal); }
+  .vf-still { position: absolute; inset: 0; }
+  .vf-empty {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    color: #5c5f6b; font-size: 11px; letter-spacing: .08em; text-transform: uppercase;
+    text-align: center; padding: 8px;
+  }
+  .vf-bezel {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 36px;
+    display: flex; align-items: stretch;
+    background: #1a1c24;
+  }
+  .vf-type {
+    flex: 1; display: flex; align-items: center; justify-content: center;
+    gap: 6px; font-size: 10px; font-weight: 800; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--ink);
+  }
+  .vf-type:hover { background: #22252f; }
+  .vf-type .chev { color: var(--teal); font-size: 9px; }
+  .vf-mute {
+    width: 36px; display: flex; align-items: center; justify-content: center;
+    border-left: 1px solid #2a2d38; color: var(--mute);
+  }
+  .vf-mute:hover, .vf-mute.on { color: var(--orange); }
+  .vf-name {
+    position: absolute; top: 4px; left: 0; right: 0;
+    text-align: center; font-size: 9px; letter-spacing: .14em;
+    text-transform: uppercase; color: #7a7d88;
+  }
+
+  .mid {
+    background: #12131a; border: 1px solid var(--line); border-radius: 14px;
+    padding: 10px; display: flex; flex-direction: column; gap: 8px; min-width: 0;
+  }
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    flex: 1;
+  }
+  .card {
+    background: #16171f; border: 1px solid var(--line); border-radius: 12px;
+    padding: 8px; text-align: left; display: flex; flex-direction: column; gap: 4px;
+    min-height: 88px; position: relative;
+  }
+  .card:hover { border-color: #3a3d4a; }
+  .card.open { border-color: var(--teal); box-shadow: 0 0 0 1px rgba(45,212,191,.25); }
+  .card.mute { opacity: .38; }
+  .card .ic { width: 22px; height: 22px; color: var(--c, var(--teal)); }
+  .card .k {
+    font-size: 10px; letter-spacing: .1em; text-transform: uppercase; font-weight: 700;
+  }
+  .card .p {
+    font-size: 11px; color: var(--mute); line-height: 1.3;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .card .mute-btn {
+    position: absolute; top: 6px; right: 6px;
+    width: 22px; height: 22px; border-radius: 6px; color: var(--mute);
+  }
+  .card .mute-btn:hover, .card.mute .mute-btn { color: var(--orange); }
+  .card.shot { grid-column: span 2; min-height: 120px; }
+  .card.shot .p { -webkit-line-clamp: 4; color: #d5d7de; }
+
+  .out {
+    background: #12131a; border: 1px solid var(--line); border-radius: 14px;
+    padding: 10px; display: flex; flex-direction: column; gap: 8px;
+  }
+  .out-phone {
+    flex: 1; min-height: 210px; border-radius: 12px;
+    background: linear-gradient(180deg,#1c2838,#0e1218);
+    border: 1px solid var(--line); position: relative; overflow: hidden;
+  }
+  .out-phone span {
+    position: absolute; left: 8px; bottom: 8px; font-size: 10px; color: #fff8;
+    letter-spacing: .08em; text-transform: uppercase;
+  }
+  .out-phone.flash { animation: outFlash .6s ease; }
+  @keyframes outFlash {
+    0% { box-shadow: 0 0 0 0 rgba(55,189,57,.6); }
+    100% { box-shadow: 0 0 0 12px rgba(55,189,57,0); }
+  }
+  .go {
+    background: var(--green); color: #041; font-weight: 800;
+    padding: 10px; border-radius: 10px; width: 100%;
+  }
+
+  .inspect {
+    margin-top: 10px; background: #16171f; border: 1px solid rgba(45,212,191,.3);
+    border-radius: 12px; padding: 10px 12px;
+  }
+  .inspect textarea {
+    width: 100%; min-height: 70px; background: #1a1a1a; border: 1px solid #2c2c2c;
+    border-radius: 8px; padding: 8px; outline: none; resize: vertical;
+  }
+  .inspect .row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .ghost { border: 1px solid #2c2c2c; padding: 4px 10px; border-radius: 8px; color: var(--mute); }
+
+  .compiled {
+    margin-top: 12px; background: #0f1016; border: 1px solid var(--line);
+    border-radius: 14px; padding: 12px 14px;
+  }
+  .compiled .row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+  .raw {
+    font-size: 13px; line-height: 1.65; color: #cfd1d8;
+  }
+  .raw span {
+    border-radius: 4px; padding: 1px 3px; transition: background .2s, color .2s;
+  }
+  .raw span.flash {
+    animation: hit .7s ease;
+  }
+  @keyframes hit {
+    0% { background: color-mix(in srgb, var(--c, var(--teal)) 55%, transparent); color: #fff; }
+    100% { background: transparent; }
+  }
+  .raw span.hot {
+    background: color-mix(in srgb, var(--c, var(--teal)) 28%, transparent);
+    box-shadow: inset 0 -2px 0 var(--c, var(--teal));
+  }
+  .raw .plus {
+    display: inline; font-size: 12px; padding: 0 4px; opacity: .6;
+  }
+
+  /* picker */
+  .modal {
+    position: fixed; inset: 0; background: #0008; display: flex;
+    align-items: center; justify-content: center; z-index: 20;
+  }
+  .modal[hidden] { display: none !important; }
+  .picker {
+    width: min(560px, 92vw); background: #12131a; border: 1px solid var(--line);
+    border-radius: 16px; padding: 16px; box-shadow: 0 24px 80px #000c;
+  }
+  .grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 10px;
+  }
+  .pick {
+    aspect-ratio: 9/16; border-radius: 10px; border: 1px solid var(--line);
+    position: relative; overflow: hidden;
+  }
+  .pick:hover, .pick.on { border-color: var(--teal); }
+  .pick .nm {
+    position: absolute; left: 0; right: 0; bottom: 0; font-size: 10px;
+    text-align: center; padding: 5px; background: linear-gradient(transparent,#000d);
+  }
+  .pick.none {
+    display: flex; align-items: center; justify-content: center;
+    background: repeating-linear-gradient(135deg,#16171c 0 6px,#1b1c22 6px 12px);
+    color: var(--mute); font-size: 11px; letter-spacing: .08em; text-transform: uppercase;
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="top">
+    <a class="back" href="index.html">← ideas</a>
+    <span class="brand">DutyCall</span>
+    <span>Friendly Asset Retrieval · Accept</span>
+    <span class="idea">Idea C · pipeline</span>
+  </div>
+  <div class="pack">
+    <div class="clip">Preview</div>
+    <div class="clip">Rally</div>
+    <div class="clip">Message</div>
+    <div class="clip">Idle</div>
+    <div class="clip on">Accept</div>
+    <div class="clip">Decline</div>
+    <div class="clip">Reschedule</div>
+  </div>
+
+  <div class="workspace">
+    <aside class="catalog">
+      <div class="lbl">Stills</div>
+      <button class="cat g1" data-still="preview"><span class="nm">Preview</span></button>
+      <button class="cat g2" data-still="idle"><span class="nm">Idle</span></button>
+      <button class="cat g3" data-still="clip"><span class="nm">This clip</span></button>
+      <button class="cat g4" data-still="msg"><span class="nm">Msg last</span></button>
+      <div class="lbl" style="margin-top:6px;font-size:10px;color:#8b8d98;text-transform:none;letter-spacing:0;line-height:1.3;">
+        Click a still, then click the <b style="color:#e8e8e8">glass</b> of Frame 1 or End.
+      </div>
+    </aside>
+
+    <div class="formula">
+      <div class="formula-head">
+        <div class="surf">
+          <b id="stillBtn">Still</b>
+          <b id="takeBtn" class="on">Take</b>
+        </div>
+        <span class="hint">Left to right is the send. Mute anything. Click a piece — the raw prompt flashes that span.</span>
+      </div>
+
+      <div class="pipeline">
+        <div class="stage-col">
+          <h3>Frame 1</h3>
+          <div class="vf" id="vfStart">
+            <div class="vf-name">opening</div>
+            <button class="vf-glass" id="startGlass" title="Choose still">
+              <div class="vf-still g3" id="startStill" hidden></div>
+              <div class="vf-empty" id="startEmpty">unique shot</div>
+            </button>
+            <div class="vf-bezel">
+              <button class="vf-type" id="startType" title="Cycle how this still is used">
+                UNIQUE <span class="chev">▾</span>
+              </button>
+              <button class="vf-mute" id="startMute" title="Mute this slot">M</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="plus pulse">+</div>
+
+        <div class="mid">
+          <h3 class="lbl">Prompt</h3>
+          <div class="cards" id="cards"></div>
+        </div>
+
+        <div class="plus pulse" id="plusEnd">+</div>
+
+        <div class="stage-col" id="endCol">
+          <h3>Frame end</h3>
+          <div class="vf" id="vfEnd">
+            <div class="vf-name">landing</div>
+            <button class="vf-glass" id="endGlass" title="Choose still">
+              <div class="vf-still g2" id="endStill" hidden></div>
+              <div class="vf-empty" id="endEmpty">Imagine chooses</div>
+            </button>
+            <div class="vf-bezel">
+              <button class="vf-type" id="endType" title="Cycle end type">
+                NONE <span class="chev">▾</span>
+              </button>
+              <button class="vf-mute" id="endMute" title="Mute this slot">M</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="eq">=</div>
+
+        <div class="out">
+          <h3 class="lbl">Output</h3>
+          <div class="out-phone" id="outPhone"><span id="outCap">Accept · take</span></div>
+          <button class="go" id="go">Make take</button>
+        </div>
+      </div>
+
+      <div class="inspect" id="inspect" hidden>
+        <div class="row">
+          <b id="insTitle">Shot</b>
+          <span>
+            <button class="ghost" id="insMute">Mute</button>
+            <button class="ghost" id="insReset">Reset auto</button>
+            <button class="ghost" id="insClose">Close</button>
+          </span>
+        </div>
+        <textarea id="insText"></textarea>
+      </div>
+
+      <div class="compiled">
+        <div class="row">
+          <div class="lbl">Compiled send</div>
+          <span class="lbl" id="optLab"></span>
+        </div>
+        <div class="raw" id="raw"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="modal" hidden>
+  <div class="picker">
+    <div class="row" style="display:flex;justify-content:space-between;align-items:center;">
+      <div>
+        <div class="lbl">Choose a still</div>
+        <div id="pickFor" style="font-weight:700;margin-top:2px;">Frame 1</div>
+      </div>
+      <button class="ghost" id="pickClose">Close</button>
+    </div>
+    <div class="grid" id="pickGrid"></div>
+  </div>
+</div>
+
+<script>
+const STILLS = [
+  { id: 'none', name: 'None', g: 'none' },
+  { id: 'preview', name: 'Preview', g: 'g1' },
+  { id: 'idle', name: 'Idle', g: 'g2' },
+  { id: 'clip', name: 'This clip', g: 'g3' },
+  { id: 'msg', name: 'Msg last', g: 'g4' },
+];
+const START_TYPES = [
+  { id: 'unique', lab: 'Unique', hint: 'No frame-1 pin. Invent the opening.' },
+  { id: 'start', lab: 'Start', hint: 'This still is frame 1. Pose is locked.' },
+  { id: 'look', lab: 'Look', hint: 'Identity / gear only. Not the opening pose.' },
+];
+const END_TYPES = [
+  { id: 'none', lab: 'None', hint: 'Imagine chooses the ending.' },
+  { id: 'pin', lab: 'Pin', hint: 'Land on this still.' },
+  { id: 'loop', lab: 'Loop', hint: 'Last frame matches frame 1.' },
+];
+
+const MID = {
+  still: [
+    { id:'concept', lab:'Concept', c:'#8ab4ff', auto:'Concept: elite squad abducts a friend for a gaming session.' },
+    { id:'look', lab:'Look', c:'#e8c27a', auto:'<IMAGE_1> Preview.png — faces, clothing, gear only.' },
+    { id:'shot', lab:'Shot', c:'#c3a6ff', auto:'They take cover on the roof. Ball-cap holds a subtle detonator. Charges blow.', shot:true },
+    { id:'rules', lab:'Rules', c:'#9ee37d', auto:'Single still, 9:16. No captions, logos, or on-image text.' },
+  ],
+  take: [
+    { id:'concept', lab:'Concept', c:'#8ab4ff', auto:'Concept: elite squad abducts a friend for a gaming session.' },
+    { id:'look', lab:'Look', c:'#e8c27a', auto:'<IMAGE_0> Preview.png — faces, clothing, gear only. New pose from the shot.' },
+    { id:'shot', lab:'Shot', c:'#c3a6ff', auto:'They take cover on the roof. Ball-cap holds a subtle detonator. Charges blow. Camera locked.', shot:true },
+    { id:'sound', lab:'Sound', c:'#9ee37d', auto:'Sound: rotors, radio, rooftop wind.' },
+    { id:'voice', lab:'Voice', c:'#e9a6c9', auto:'' },
+    { id:'len', lab:'Length', c:'#8b8d98', auto:'Duration: 6 seconds.' },
+  ],
+};
+
+const ICONS = {
+  concept: '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>',
+  look: '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="3"/><path d="M5 20c1.5-4 4-6 7-6s5.5 2 7 6"/></svg>',
+  shot: '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="6" width="18" height="14" rx="2"/><path d="M8 6V4h8v2M8 12h8"/></svg>',
+  sound: '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 10v4h4l5 5V5L8 10H4z"/><path d="M16 9a4 4 0 0 1 0 6"/></svg>',
+  voice: '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>',
+  len: '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+  rules: '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l8 4v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7l8-4z"/></svg>',
+};
+
+const layers = {
+  still: { startType: 'look', startStill: 'preview', startMute: false, endType: 'none', endStill: null, endMute: false, mute: {}, edit: {} },
+  take:  { startType: 'unique', startStill: null, startMute: false, endType: 'none', endStill: null, endMute: false, mute: {}, edit: {} },
+};
+let surf = 'take';
+let openId = null;
+let pickFor = null; // 'start' | 'end'
+let heldStill = null;
+
+function L(){ return layers[surf]; }
+function mids(){ return MID[surf]; }
+function stillBy(id){ return STILLS.find(s => s.id === id); }
+function startMeta(){ return START_TYPES.find(t => t.id === L().startType); }
+function endMeta(){ return END_TYPES.find(t => t.id === L().endType); }
+
+function val(part){
+  if (L().mute[part.id]) return '';
+  const e = L().edit[part.id];
+  if (e != null) return e.trim();
+  return (part.auto || '').trim();
+}
+
+function startText(){
+  const l = L();
+  if (l.startMute) return '';
+  const t = startMeta();
+  const s = stillBy(l.startStill);
+  if (t.id === 'unique' || !l.startStill) return 'No start-frame pin. Invent the opening from the shot.';
+  if (t.id === 'look') return `${s.name} is identity / look only — not frame 1. Do not copy pose.`;
+  return `Image-to-video begins on ${s.name} (frame 1). The shot is what happens next.`;
+}
+function endText(){
+  if (surf === 'still') return '';
+  const l = L();
+  if (l.endMute) return '';
+  const t = endMeta();
+  const s = stillBy(l.endStill);
+  if (t.id === 'none' || !l.endStill && t.id !== 'loop') return '';
+  if (t.id === 'loop') return 'Loop: last frame matches frame 1.';
+  return `Last frame: ${s ? s.name : 'this still'}. Land here.`;
+}
+
+function parts(){
+  const out = [];
+  const st = startText();
+  if (st) out.push({ id:'start', lab:'Frame 1', c:'#2dd4bf', text: st });
+  mids().forEach(p => {
+    const t = val(p);
+    if (t) out.push({ id:p.id, lab:p.lab, c:p.c, text:t });
+  });
+  const en = endText();
+  if (en) out.push({ id:'end', lab:'Frame end', c:'#f0a36b', text: en });
+  return out;
+}
+
+function flash(id){
+  document.querySelectorAll('#raw [data-id]').forEach(el => {
+    if (el.dataset.id === id) {
+      el.classList.remove('flash');
+      void el.offsetWidth;
+      el.classList.add('flash');
+      el.classList.add('hot');
+    } else el.classList.remove('hot');
+  });
+}
+
+function renderCards(){
+  const el = document.getElementById('cards');
+  el.innerHTML = mids().map(p => {
+    const muted = !!L().mute[p.id];
+    const preview = val(p) || (muted ? 'muted' : 'empty — mute or write');
+    return `<button class="card ${p.shot?'shot':''} ${openId===p.id?'open':''} ${muted?'mute':''}" data-id="${p.id}" style="--c:${p.c}">
+      <button class="mute-btn" data-mute="${p.id}" title="Mute">M</button>
+      ${ICONS[p.id] || ICONS.shot}
+      <div class="k">${p.lab}</div>
+      <div class="p">${esc(preview)}</div>
+    </button>`;
+  }).join('');
+  el.querySelectorAll('.card').forEach(b => {
+    b.onclick = e => {
+      if (e.target.closest('[data-mute]')) return;
+      openId = openId === b.dataset.id ? null : b.dataset.id;
+      render();
+      flash(b.dataset.id);
+    };
+  });
+  el.querySelectorAll('[data-mute]').forEach(b => {
+    b.onclick = e => {
+      e.stopPropagation();
+      L().mute[b.dataset.mute] = !L().mute[b.dataset.mute];
+      render();
+      flash(b.dataset.mute);
+    };
+  });
+}
+
+function renderVf(){
+  const l = L();
+  const st = startMeta();
+  const hasStart = st.id !== 'unique' && l.startStill;
+  document.getElementById('startType').innerHTML = `${st.lab} <span class="chev">▾</span>`;
+  document.getElementById('vfStart').className =
+    'vf' + (hasStart ? (st.id==='look'?' is-look':' is-on') : '') + (l.startMute?' is-mute':'');
+  document.getElementById('startStill').hidden = !hasStart;
+  document.getElementById('startEmpty').hidden = hasStart;
+  document.getElementById('startEmpty').textContent = st.id==='unique' ? 'unique shot' : 'click glass';
+  const sEl = document.getElementById('startStill');
+  sEl.className = 'vf-still ' + (stillBy(l.startStill)?.g || 'g3');
+  document.getElementById('startMute').classList.toggle('on', l.startMute);
+
+  const take = surf === 'take';
+  document.getElementById('endCol').classList.toggle('hide', !take);
+  document.getElementById('plusEnd').style.visibility = take ? 'visible' : 'hidden';
+  if (take) {
+    const et = endMeta();
+    const hasEnd = et.id !== 'none' && (et.id==='loop' || l.endStill);
+    document.getElementById('endType').innerHTML = `${et.lab} <span class="chev">▾</span>`;
+    document.getElementById('vfEnd').className =
+      'vf' + (hasEnd ? ' is-on' : '') + (l.endMute?' is-mute':'');
+    document.getElementById('endStill').hidden = !(et.id==='pin' && l.endStill);
+    document.getElementById('endEmpty').hidden = et.id==='pin' && l.endStill;
+    document.getElementById('endEmpty').textContent =
+      et.id==='loop' ? 'loop to frame 1' : et.id==='none' ? 'Imagine chooses' : 'click glass';
+    document.getElementById('endStill').className = 'vf-still ' + (stillBy(l.endStill)?.g || 'g2');
+    document.getElementById('endMute').classList.toggle('on', l.endMute);
+  }
+}
+
+function renderRaw(){
+  const ps = parts();
+  document.getElementById('raw').innerHTML = ps.length
+    ? ps.map(p => `<span data-id="${p.id}" style="--c:${p.c}">${esc(p.text)}</span>`).join('<span class="plus">+</span>')
+    : '<i style="color:#8b8d98">Nothing to send.</i>';
+  document.getElementById('raw').querySelectorAll('span[data-id]').forEach(s => {
+    s.onmouseenter = () => {
+      document.querySelectorAll('.card').forEach(c => c.classList.toggle('open', c.dataset.id === s.dataset.id));
+      s.classList.add('hot');
+    };
+    s.onmouseleave = () => {
+      if (openId !== s.dataset.id) s.classList.remove('hot');
+      if (openId !== s.dataset.id) document.querySelectorAll('.card').forEach(c => c.classList.toggle('open', c.dataset.id === openId));
+    };
+    s.onclick = () => {
+      if (s.dataset.id === 'start' || s.dataset.id === 'end') {
+        flash(s.dataset.id);
+        return;
+      }
+      openId = s.dataset.id;
+      render();
+      flash(s.dataset.id);
+    };
+  });
+  const opts = [];
+  if (surf==='take') opts.push('model 1.5', '720p', '9:16');
+  else opts.push('image quality', '1k', '9:16');
+  if (L().startType==='start' && L().startStill) opts.push('image = frame 1');
+  else if (L().startType==='look' || mids().some(p=>p.id==='look' && val(p))) opts.push('refs only');
+  document.getElementById('optLab').textContent = opts.join(' · ');
+}
+
+function renderInspect(){
+  const box = document.getElementById('inspect');
+  const p = mids().find(x => x.id === openId);
+  if (!p) { box.hidden = true; return; }
+  box.hidden = false;
+  document.getElementById('insTitle').textContent = p.lab;
+  document.getElementById('insText').value = L().edit[p.id] != null ? L().edit[p.id] : p.auto;
+}
+
+function render(){
+  document.getElementById('stillBtn').classList.toggle('on', surf==='still');
+  document.getElementById('takeBtn').classList.toggle('on', surf==='take');
+  document.getElementById('go').textContent = surf==='still' ? 'Make still' : 'Make take';
+  document.getElementById('outCap').textContent = 'Accept · ' + surf;
+  renderVf();
+  renderCards();
+  renderInspect();
+  renderRaw();
+}
+
+function esc(s){ return (s||'').replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+
+function openPicker(which){
+  pickFor = which;
+  document.getElementById('pickFor').textContent = which === 'start' ? 'Frame 1' : 'Frame end';
+  const cur = which === 'start' ? L().startStill : L().endStill;
+  document.getElementById('pickGrid').innerHTML = STILLS.map(s => {
+    const cls = s.id==='none' ? 'pick none' : `pick ${s.g}`;
+    return `<button class="${cls} ${s.id===cur?'on':''}" data-id="${s.id}">
+      ${s.id==='none'?'None':`<span class="nm">${s.name}</span>`}
+    </button>`;
+  }).join('');
+  document.getElementById('modal').hidden = false;
+  document.querySelectorAll('#pickGrid .pick').forEach(b => b.onclick = () => {
+    const id = b.dataset.id === 'none' ? null : b.dataset.id;
+    if (pickFor === 'start') {
+      L().startStill = id;
+      if (!id) L().startType = 'unique';
+      else if (L().startType === 'unique') L().startType = 'start';
+    } else {
+      L().endStill = id;
+      if (!id) L().endType = 'none';
+      else if (L().endType === 'none') L().endType = 'pin';
+    }
+    document.getElementById('modal').hidden = true;
+    heldStill = null;
+    render();
+    flash(pickFor === 'start' ? 'start' : 'end');
+  });
+}
+
+document.getElementById('stillBtn').onclick = () => { openId=null; surf='still'; render(); };
+document.getElementById('takeBtn').onclick = () => { openId=null; surf='take'; render(); };
+
+document.getElementById('startType').onclick = () => {
+  const i = START_TYPES.findIndex(t => t.id === L().startType);
+  L().startType = START_TYPES[(i+1)%START_TYPES.length].id;
+  if (L().startType !== 'unique' && !L().startStill) L().startStill = 'clip';
+  render(); flash('start');
+};
+document.getElementById('endType').onclick = () => {
+  const i = END_TYPES.findIndex(t => t.id === L().endType);
+  L().endType = END_TYPES[(i+1)%END_TYPES.length].id;
+  if (L().endType === 'pin' && !L().endStill) L().endStill = 'idle';
+  render(); flash('end');
+};
+document.getElementById('startMute').onclick = () => { L().startMute = !L().startMute; render(); flash('start'); };
+document.getElementById('endMute').onclick = () => { L().endMute = !L().endMute; render(); flash('end'); };
+document.getElementById('startGlass').onclick = () => {
+  if (heldStill) {
+    L().startStill = heldStill;
+    if (L().startType === 'unique') L().startType = 'start';
+    heldStill = null;
+    document.querySelectorAll('.cat').forEach(c => c.classList.remove('is-pick'));
+    render(); flash('start');
+    return;
+  }
+  openPicker('start');
+};
+document.getElementById('endGlass').onclick = () => {
+  if (heldStill) {
+    L().endStill = heldStill;
+    L().endType = 'pin';
+    heldStill = null;
+    document.querySelectorAll('.cat').forEach(c => c.classList.remove('is-pick'));
+    render(); flash('end');
+    return;
+  }
+  openPicker('end');
+};
+
+document.querySelectorAll('.cat').forEach(c => c.onclick = () => {
+  heldStill = c.dataset.still;
+  document.querySelectorAll('.cat').forEach(x => x.classList.toggle('is-pick', x===c));
+});
+
+document.getElementById('pickClose').onclick = () => document.getElementById('modal').hidden = true;
+document.getElementById('modal').onclick = e => { if (e.target.id==='modal') e.currentTarget.hidden = true; };
+
+document.getElementById('insText').oninput = e => {
+  if (!openId) return;
+  L().edit[openId] = e.target.value;
+  renderRaw();
+  flash(openId);
+};
+document.getElementById('insClose').onclick = () => { openId=null; render(); };
+document.getElementById('insReset').onclick = () => { if (openId) delete L().edit[openId]; render(); flash(openId); };
+document.getElementById('insMute').onclick = () => { if (openId) L().mute[openId] = !L().mute[openId]; render(); flash(openId); };
+
+document.getElementById('go').onclick = () => {
+  document.getElementById('outPhone').classList.remove('flash');
+  void document.getElementById('outPhone').offsetWidth;
+  document.getElementById('outPhone').classList.add('flash');
+};
+
+render();
+</script>
+</body>
+</html>

@@ -1,10 +1,13 @@
-# Working projects
-projects/*
-!projects/.gitkeep
-
+# Working output
+rallies/
 *.log
+.rally-builder.pid
+.rally-builder.log
 .imagine-studio.pid
 .imagine-studio.log
+
+# Local agent notes
+.grok/
 
 # Secrets / env
 .env

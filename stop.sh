@@ -1,20 +1,28 @@
 #!/usr/bin/env bash
-# Stop Imagine started by ./start.sh (or anything listening on IMAGINE_PORT)
+# Stop Rally Builder started by ./start.sh (or anything listening on RALLY_PORT)
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$ROOT"
 
-PID_FILE="$ROOT/.imagine-studio.pid"
+PID_FILE="$ROOT/.rally-builder.pid"
+LOG_FILE="$ROOT/.rally-builder.log"
 
 if [[ -f "$ROOT/.env" ]]; then
   set -a
-  # shellcheck disable=SC1091
-  source <(grep -E '^[A-Za-z_][A-Za-z0-9_]*=' "$ROOT/.env" | sed 's/\r$//')
+  # bash 3.2 (macOS) cannot source a process substitution, so RALLY_PORT
+  # never loaded and stop.sh would kill whatever is on 8080.
+  _env_tmp="$(mktemp)"
+  grep -E '^[A-Za-z_][A-Za-z0-9_]*=' "$ROOT/.env" | sed 's/\r$//' > "$_env_tmp"
+  # shellcheck disable=SC1090
+  source "$_env_tmp"
+  rm -f "$_env_tmp"
+  unset _env_tmp
   set +a
 fi
 
-PORT="${IMAGINE_PORT:-8070}"
+PORT="${RALLY_PORT:-8080}"
+stopped=0
 
 stop_pid() {
   local pid="$1"
@@ -42,17 +50,49 @@ stop_pid() {
   return 0
 }
 
+# 1) PID file from start.sh
 if [[ -f "$PID_FILE" ]]; then
   pid="$(tr -d '[:space:]' <"$PID_FILE" || true)"
-  stop_pid "$pid" "Imagine (pid file)" || true
+  if stop_pid "$pid" "Rally Builder (pid file)"; then
+    stopped=1
+  fi
   rm -f "$PID_FILE"
 fi
 
+# 2) Anything still listening on the app port (orphans / other starts)
 if command -v lsof >/dev/null 2>&1; then
   while read -r pid; do
     [[ -z "$pid" ]] && continue
-    stop_pid "$pid" "listener on :$PORT" || true
-  done < <(lsof -nP -tiTCP:"$PORT" -sTCP:LISTEN 2>/dev/null || true)
+    if stop_pid "$pid" "listener on :$PORT"; then
+      stopped=1
+    fi
+  done < <(lsof -nP -t -iTCP:"$PORT" -sTCP:LISTEN 2>/dev/null || true)
 fi
 
-echo "Imagine is not running on :$PORT"
+# 3) Fallback: python -m app.main (best-effort, macOS-safe pgrep)
+if command -v pgrep >/dev/null 2>&1; then
+  while read -r pid; do
+    [[ -z "$pid" ]] && continue
+    # Only match this repo's cwd if possible
+    if command -v lsof >/dev/null 2>&1; then
+      cwd="$(lsof -a -p "$pid" -d cwd -Fn 2>/dev/null | sed -n 's/^n//p' | head -1)"
+      if [[ -n "$cwd" && "$cwd" != "$ROOT" ]]; then
+        continue
+      fi
+    fi
+    if stop_pid "$pid" "python -m app.main"; then
+      stopped=1
+    fi
+  done < <(pgrep -f '[Pp]ython.*-m app\.main' 2>/dev/null || true)
+fi
+
+if [[ "$stopped" -eq 1 ]]; then
+  echo "Rally Builder is stopped."
+  if [[ -f "$LOG_FILE" ]]; then
+    echo "  log kept at $LOG_FILE"
+  fi
+  exit 0
+fi
+
+echo "Nothing to stop (no pid file, nothing on :$PORT)."
+exit 0

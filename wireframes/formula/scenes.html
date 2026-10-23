@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Rally · scenes</title>
+<style>
+  :root {
+    --bg: #0d0e14;
+    --ink: #e8e8e8;
+    --mute: #8b8d98;
+    --line: rgba(255,255,255,.08);
+    --teal: #2dd4bf;
+    --green: #37BD39;
+    --amber: #f0a36b;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%;
+    background: var(--bg); color: var(--ink);
+    font: 13px/1.4 ui-sans-serif, system-ui, -apple-system, sans-serif;
+  }
+  button { font: inherit; color: inherit; cursor: pointer; border: 0; background: none; }
+  button:disabled { opacity: .35; cursor: default; }
+  .app {
+    height: 100%;
+    display: grid;
+    grid-template-rows: 48px 36px 64px 1fr;
+  }
+  .top, .pack, .master { border-bottom: 1px solid var(--line); }
+  .top { display: flex; align-items: center; gap: 12px; padding: 0 14px; }
+  .brand { color: var(--green); font-weight: 700; }
+  .name { font-weight: 600; }
+  .name span { color: var(--mute); font-weight: 400; margin-left: 8px; }
+  .spacer { flex: 1; }
+  .ico {
+    width: 28px; height: 28px; border-radius: 8px;
+    border: 1px solid var(--line); color: var(--mute);
+    display: grid; place-items: center;
+  }
+  .pack { display: flex; align-items: stretch; }
+  .clip {
+    flex: 1; min-width: 72px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 1px; color: var(--mute); border-right: 1px solid var(--line); position: relative;
+  }
+  .clip .k { font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
+  .clip .s { font-size: 10px; }
+  .clip.is-on { color: var(--ink); background: rgba(45,212,191,.08); }
+  .clip.is-on::after {
+    content: ""; position: absolute; left: 12%; right: 12%; bottom: 0; height: 2px; background: var(--teal);
+  }
+  .clip.is-ok .s { color: var(--green); }
+
+  .master {
+    display: flex; align-items: center; gap: 10px;
+    padding: 0 12px; background: #101118;
+  }
+  .m-track {
+    flex: 1; min-width: 0; height: 44px;
+    display: flex; gap: 3px; align-items: stretch;
+  }
+  .mclip {
+    min-width: 72px; border-radius: 8px; border: 1px solid var(--line);
+    background: linear-gradient(180deg, #1c3a36, #14211f);
+    text-align: left; padding: 6px 8px;
+    display: flex; flex-direction: column; justify-content: center;
+  }
+  .mclip.on { border-color: var(--teal); box-shadow: inset 0 0 0 1px var(--teal); }
+  .mclip .t { font-weight: 700; font-size: 12px; }
+  .mclip .d { color: var(--mute); font-size: 11px; }
+  .mclip.still {
+    flex: 1; background: #16171f; color: var(--mute);
+  }
+  .edit {
+    flex: none; height: 36px; padding: 0 14px; border-radius: 10px;
+    border: 1px solid var(--line); font-weight: 700;
+  }
+
+  .work {
+    min-height: 0;
+    display: grid;
+    grid-template-columns: 150px 1fr 220px 240px;
+    gap: 18px; padding: 16px;
+  }
+  .col { min-height: 0; display: flex; flex-direction: column; gap: 8px; }
+  .k { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--mute); font-weight: 650; }
+  .card {
+    flex: 1; min-height: 0; background: #16171f; border: 1px solid var(--line);
+    border-radius: 14px; padding: 12px; color: #cfd1d8;
+  }
+  .phone {
+    flex: 1; min-height: 0; border-radius: 16px; border: 1px solid var(--line);
+    background: linear-gradient(180deg, #243044, #14181f); position: relative;
+  }
+  .phone span {
+    position: absolute; left: 10px; bottom: 10px;
+    font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: #fff8;
+  }
+  .go, .ghost, .ok { border-radius: 10px; padding: 10px; font-weight: 700; }
+  .go { background: var(--green); color: #041; }
+  .row { display: flex; gap: 8px; }
+  .ghost { flex: 1; border: 1px solid #2c2c2c; }
+  .ok { flex: 1; border: 1px solid var(--green); color: var(--green); }
+
+  .shade {
+    position: fixed; inset: 0; background: rgba(0,0,0,.62);
+    display: grid; place-items: center; z-index: 5;
+  }
+  .shade[hidden] { display: none; }
+  .sheet {
+    width: min(1100px, 80vw); height: min(780px, 80vh);
+    background: #12131a; border: 1px solid var(--line); border-radius: 18px;
+    box-shadow: 0 30px 90px #000c;
+    display: grid; grid-template-rows: auto 1fr auto auto; gap: 12px;
+    padding: 14px 16px 12px;
+  }
+  .head, .transport { display: flex; align-items: center; gap: 10px; }
+  .head h2 { margin: 0; font-size: 15px; font-weight: 650; }
+  .head .sub, .hint { color: var(--mute); }
+  .save {
+    background: var(--green); color: #041; font-weight: 800;
+    border-radius: 10px; padding: 8px 14px;
+  }
+  .close {
+    border: 1px solid #2c2c2c; border-radius: 10px; padding: 8px 12px; font-weight: 650;
+  }
+  .stage { min-height: 0; display: grid; place-items: center; }
+  .monitor {
+    height: 100%; max-height: 420px; aspect-ratio: 9 / 16;
+    border-radius: 16px; border: 1px solid var(--line); position: relative;
+    background: #14181f; overflow: hidden;
+  }
+  .monitor .f {
+    position: absolute; inset: 0; display: grid; place-items: center;
+    font-size: 28px; font-weight: 750; letter-spacing: .04em;
+  }
+  .monitor .meta {
+    position: absolute; left: 10px; bottom: 10px;
+    font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: #fff8;
+  }
+  .jog { display: flex; gap: 6px; }
+  .jog button, .tool {
+    height: 36px; padding: 0 12px; border-radius: 10px;
+    border: 1px solid #2c2c2c; font-weight: 700;
+  }
+  .tool.cut { border-color: var(--amber); color: var(--amber); }
+  .tc { font-variant-numeric: tabular-nums; font-weight: 650; }
+  .tl { display: flex; flex-direction: column; gap: 6px; }
+  .ruler {
+    position: relative; height: 16px; color: var(--mute); font-size: 10px;
+    background-image: repeating-linear-gradient(90deg, rgba(255,255,255,.28) 0 1px, transparent 1px 10px);
+    cursor: ew-resize; user-select: none;
+  }
+  .ruler span { position: absolute; top: 0; transform: translateX(-50%); }
+  .ruler span:first-child { transform: none; }
+  .lane { position: relative; height: 64px; }
+  .eclips { display: flex; height: 100%; gap: 3px; }
+  .eclip {
+    min-width: 48px; border-radius: 8px; border: 1px solid var(--line);
+    background:
+      repeating-linear-gradient(90deg, rgba(255,255,255,.06) 0 1px, transparent 1px 7px),
+      linear-gradient(180deg, #243044, #171b22);
+    text-align: left; padding: 8px; cursor: grab;
+  }
+  .eclip.on { border-color: var(--teal); }
+  .eclip .t { display: block; font-weight: 700; }
+  .eclip .d { color: var(--mute); font-size: 11px; }
+  .playhead {
+    position: absolute; top: -16px; bottom: 0; width: 2px; margin-left: -1px;
+    background: #fff; pointer-events: none; z-index: 2;
+  }
+  .playhead::before {
+    content: ""; position: absolute; top: 0; left: -5px;
+    border-left: 6px solid transparent; border-right: 6px solid transparent;
+    border-top: 8px solid #fff;
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <span class="brand">← DutyCall</span>
+    <div class="name">Friendly Asset Retrieval <span id="stepName">Accept</span></div>
+    <div class="spacer"></div>
+    <button class="ico">↻</button>
+    <button class="ico">⚙</button>
+  </header>
+  <nav class="pack" id="pack"></nav>
+  <div class="master">
+    <div class="m-track" id="mtrack"></div>
+    <button class="edit" id="editOpen" title="Cut this scene on a frame timeline">Edit</button>
+  </div>
+  <div class="work">
+    <div class="col">
+      <div class="k">Frame 1</div>
+      <div class="card" id="frame"></div>
+    </div>
+    <div class="col">
+      <div class="k">Prompt</div>
+      <div class="card" id="prompt"></div>
+    </div>
+    <div class="col">
+      <div class="k">Compiled</div>
+      <div class="card" id="compiled"></div>
+    </div>
+    <div class="col">
+      <div class="phone"><span id="phoneCap"></span></div>
+      <button class="go" id="make">New take</button>
+      <div class="row">
+        <button class="ghost" id="nudge">Nudge</button>
+        <button class="ok">Approve</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="shade" id="shade" hidden>
+  <div class="sheet" role="dialog" aria-label="Edit scene">
+    <div class="head">
+      <h2 id="editTitle">Edit</h2>
+      <span class="sub" id="editSub"></span>
+      <div class="spacer"></div>
+      <button class="save" id="save">Save</button>
+      <button class="close" id="close">Close</button>
+    </div>
+    <div class="stage">
+      <div class="monitor" id="monitor">
+        <div class="f" id="frameNum">0</div>
+        <div class="meta" id="monMeta"></div>
+      </div>
+    </div>
+    <div class="transport">
+      <div class="jog">
+        <button id="back" title="Previous frame">◀ 1 frame</button>
+        <button id="play" title="Play">Play</button>
+        <button id="fwd" title="Next frame">1 frame ▶</button>
+      </div>
+      <span class="tc" id="tc">0:00.00 · frame 0</span>
+      <div class="spacer"></div>
+      <button class="tool cut" id="cut">Cut</button>
+      <button class="tool" id="del">Delete</button>
+    </div>
+    <div class="tl">
+      <div class="ruler" id="ruler"></div>
+      <div class="lane" id="lane">
+        <div class="eclips" id="eclips"></div>
+        <div class="playhead" id="playhead"></div>
+      </div>
+      <div class="hint" id="hint">Click the timeline to jump to a frame. Cut splits at the playhead. Drag clips to reorder. Save puts them on the step timeline.</div>
+    </div>
+  </div>
+</div>
+<script>
+  const FPS = 30;
+  const STEPS = ["Preview", "Rally", "Message", "Idle", "Accept", "Decline", "Reschedule"];
+  let nextId = 1;
+  function makeScene(seconds) {
+    return { id: nextId++, frames: Math.round(seconds * FPS) };
+  }
+  const pack = {
+    Preview: { video: false, scenes: [], selected: null },
+    Rally: { video: true, scenes: [makeScene(6)], selected: null },
+    Message: { video: true, scenes: [makeScene(6)], selected: null },
+    Idle: { video: true, scenes: [makeScene(4)], selected: null },
+    Accept: { video: true, scenes: [makeScene(10)], selected: null },
+    Decline: { video: true, scenes: [makeScene(6)], selected: null },
+    Reschedule: { video: true, scenes: [makeScene(6)], selected: null },
+  };
+  for (const step of Object.values(pack)) {
+    if (step.scenes[0]) step.selected = step.scenes[0].id;
+  }
+  let current = "Accept";
+
+  let clips = [];
+  let playhead = 0;
+  let clipSel = null;
+  let editingId = null;
+  let dragId = null;
+  let timer = null;
+  let clipSeq = 1;
+
+  const shade = document.getElementById("shade");
+
+  function fmtDur(frames) {
+    return (frames / FPS).toFixed(2).replace(/0$/, "") + "s";
+  }
+  function fmtTc(frame) {
+    const clamped = Math.max(0, frame);
+    const sec = Math.floor(clamped / FPS);
+    const sub = clamped % FPS;
+    const hundredths = Math.floor(sub * 100 / FPS);
+    return "0:" + String(sec).padStart(2, "0") + "." + String(hundredths).padStart(2, "0");
+  }
+  function totalFrames() {
+    return clips.reduce((n, c) => n + (c.out - c.in), 0);
+  }
+  function locate(frame) {
+    let acc = 0;
+    for (let i = 0; i < clips.length; i++) {
+      const len = clips[i].out - clips[i].in;
+      if (frame < acc + len) return { index: i, clip: clips[i], local: frame - acc, acc, len };
+      acc += len;
+    }
+    return null;
+  }
+  function canCut() {
+    const loc = locate(playhead);
+    return !!loc && loc.local > 0 && loc.local < loc.len;
+  }
+
+  function renderPack() {
+    const nav = document.getElementById("pack");
+    nav.innerHTML = "";
+    for (const name of STEPS) {
+      const el = document.createElement("button");
+      el.className = "clip" + (name === current ? " is-on" : "") + (name !== "Decline" && name !== "Reschedule" ? " is-ok" : "");
+      const sub = name === current ? (pack[name].video ? "timeline" : "still") : (name === "Decline" || name === "Reschedule" ? "framed" : "approved");
+      el.innerHTML = '<span class="k">' + name + '</span><span class="s">' + sub + "</span>";
+      el.onclick = () => {
+        if (name === current) return;
+        closeEditor(false);
+        current = name;
+        renderStudio();
+      };
+      nav.appendChild(el);
+    }
+  }
+
+  function renderMaster() {
+    const track = document.getElementById("mtrack");
+    const edit = document.getElementById("editOpen");
+    track.innerHTML = "";
+    const model = pack[current];
+    edit.disabled = !model.video;
+    if (!model.video) {
+      const still = document.createElement("div");
+      still.className = "mclip still";
+      still.innerHTML = '<span class="t">Preview</span><span class="d">still · no clip timeline</span>';
+      track.appendChild(still);
+      return;
+    }
+    model.scenes.forEach((sc, i) => {
+      const b = document.createElement("button");
+      b.className = "mclip" + (sc.id === model.selected ? " on" : "");
+      b.style.flex = sc.frames + " 1 0";
+      b.innerHTML = '<span class="t">Scene ' + (i + 1) + '</span><span class="d">' + fmtDur(sc.frames) + " · pipeline</span>";
+      b.title = "Open this scene’s pipeline";
+      b.onclick = () => {
+        model.selected = sc.id;
+        renderMaster();
+        renderFormula();
+      };
+      b.ondblclick = () => {
+        model.selected = sc.id;
+        openEditor();
+      };
+      track.appendChild(b);
+    });
+  }
+
+  function selectedIndex() {
+    const model = pack[current];
+    return model.scenes.findIndex((sc) => sc.id === model.selected);
+  }
+
+  function renderFormula() {
+    const model = pack[current];
+    document.getElementById("stepName").textContent = current;
+    document.getElementById("make").textContent = model.video ? "New take" : "Make still";
+    document.getElementById("nudge").textContent = model.video ? "Nudge" : "Tweak";
+    if (!model.video) {
+      document.getElementById("frame").textContent = "Preview still. The step timeline does not apply.";
+      document.getElementById("prompt").textContent = "The still formula, unchanged.";
+      document.getElementById("compiled").textContent = "Make and Tweak stay on the still.";
+      document.getElementById("phoneCap").textContent = "Preview · still";
+      return;
+    }
+    const i = Math.max(0, selectedIndex());
+    const n = model.scenes.length;
+    const sc = model.scenes[i];
+    if (n === 1) {
+      document.getElementById("frame").textContent = "Frame 1 for this step. One pipeline output so far.";
+      document.getElementById("prompt").textContent = current + " is one scene, " + fmtDur(sc.frames) + ". Edit it from the timeline above, not from here.";
+      document.getElementById("compiled").textContent = "Make and Nudge run on this scene. Approve still approves the step.";
+    } else if (i === 0) {
+      document.getElementById("frame").textContent = "This scene’s first frame. The other scenes stay where they are.";
+      document.getElementById("prompt").textContent = "Scene 1 · " + fmtDur(sc.frames) + ". Nudge changes this scene only.";
+      document.getElementById("compiled").textContent = "Pipeline for scene 1 of " + n + ".";
+    } else {
+      document.getElementById("frame").textContent = "Last frame of scene " + i + ". This generate starts there.";
+      document.getElementById("prompt").textContent = "Scene " + (i + 1) + " · " + fmtDur(sc.frames) + ". Its own shot. Make writes this scene, not the step.";
+      document.getElementById("compiled").textContent = "Pipeline for scene " + (i + 1) + " of " + n + ". Approve still approves " + current + ".";
+    }
+    document.getElementById("phoneCap").textContent = current + " · scene " + (i + 1);
+  }
+
+  function renderStudio() {
+    renderPack();
+    renderMaster();
+    renderFormula();
+  }
+
+  function stopPlay() {
+    if (timer) clearInterval(timer);
+    timer = null;
+    const play = document.getElementById("play");
+    if (play) play.textContent = "Play";
+  }
+
+  function playheadPx() {
+    const lane = document.getElementById("lane");
+    const total = totalFrames();
+    if (!total || !clips.length) return 0;
+    const gaps = Math.max(0, clips.length - 1) * 3;
+    const inner = Math.max(0, lane.clientWidth - gaps);
+    let acc = 0;
+    let gapAcc = 0;
+    for (let i = 0; i < clips.length; i++) {
+      const len = clips[i].out - clips[i].in;
+      if (playhead < acc + len || i === clips.length - 1) {
+        const local = Math.min(len, Math.max(0, playhead - acc));
+        return gapAcc + (local / total) * inner;
+      }
+      acc += len;
+      gapAcc += 3;
+    }
+    return 0;
+  }
+
+  function paintPlayhead() {
+    const total = totalFrames();
+    const head = document.getElementById("playhead");
+    head.style.left = playheadPx() + "px";
+    document.getElementById("tc").textContent = fmtTc(playhead) + " · frame " + playhead;
+    document.getElementById("frameNum").textContent = String(playhead);
+    document.getElementById("monMeta").textContent = fmtTc(playhead);
+    const hue = 200 + (playhead % 50);
+    document.getElementById("monitor").style.background =
+      "linear-gradient(180deg, hsl(" + hue + ",28%,24%), #14181f)";
+    document.getElementById("cut").disabled = !canCut();
+    document.getElementById("del").disabled = !clipSel;
+    document.getElementById("save").disabled = clips.length === 0;
+    document.querySelectorAll(".eclip").forEach((el) => {
+      el.classList.toggle("on", el.dataset.id === clipSel);
+    });
+  }
+
+  function paintRuler() {
+    const ruler = document.getElementById("ruler");
+    const total = Math.max(totalFrames(), 1);
+    const seconds = Math.floor((total - 1) / FPS);
+    ruler.innerHTML = "";
+    for (let s = 0; s <= seconds; s++) {
+      const mark = document.createElement("span");
+      mark.style.left = (s * FPS / total * 100) + "%";
+      mark.textContent = "0:" + String(s).padStart(2, "0");
+      ruler.appendChild(mark);
+    }
+  }
+
+  function renderClips() {
+    const box = document.getElementById("eclips");
+    box.innerHTML = "";
+    clips.forEach((c, i) => {
+      const el = document.createElement("div");
+      el.className = "eclip";
+      el.draggable = true;
+      el.dataset.id = c.id;
+      el.style.flex = (c.out - c.in) + " 1 0";
+      el.innerHTML = '<span class="t">Clip ' + (i + 1) + '</span><span class="d">' + fmtDur(c.out - c.in) + "</span>";
+      el.addEventListener("click", (e) => {
+        clipSel = c.id;
+        seekAt(e.clientX);
+      });
+      el.addEventListener("dragstart", (e) => {
+        dragId = c.id;
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("text/plain", c.id);
+      });
+      el.addEventListener("dragover", (e) => e.preventDefault());
+      el.addEventListener("drop", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        reorder(dragId, c.id);
+      });
+      box.appendChild(el);
+    });
+    paintRuler();
+    paintPlayhead();
+  }
+
+  function seekAt(clientX) {
+    stopPlay();
+    const rect = document.getElementById("lane").getBoundingClientRect();
+    const total = totalFrames();
+    const n = clips.length;
+    if (total <= 0 || n === 0 || rect.width <= 0) return;
+    const x = Math.min(rect.width, Math.max(0, clientX - rect.left));
+    const gaps = Math.max(0, n - 1) * 3;
+    const inner = Math.max(1, rect.width - gaps);
+    let acc = 0;
+    let gapAcc = 0;
+    for (let i = 0; i < n; i++) {
+      const len = clips[i].out - clips[i].in;
+      const w = (len / total) * inner;
+      if (x < gapAcc + w || i === n - 1) {
+        const local = Math.min(len - 1, Math.max(0, Math.floor(((x - gapAcc) / w) * len)));
+        playhead = acc + local;
+        clipSel = clips[i].id;
+        paintPlayhead();
+        return;
+      }
+      acc += len;
+      gapAcc += w + 3;
+    }
+  }
+
+  function step(delta) {
+    stopPlay();
+    const total = totalFrames();
+    if (total <= 0) return;
+    playhead = Math.min(total - 1, Math.max(0, playhead + delta));
+    const loc = locate(playhead);
+    if (loc) clipSel = loc.clip.id;
+    paintPlayhead();
+  }
+
+  function cut() {
+    stopPlay();
+    const loc = locate(playhead);
+    if (!loc || loc.local <= 0 || loc.local >= loc.len) return;
+    const at = loc.clip.in + loc.local;
+    const right = { id: "c" + (++clipSeq), in: at, out: loc.clip.out };
+    loc.clip.out = at;
+    clips.splice(loc.index + 1, 0, right);
+    clipSel = right.id;
+    renderClips();
+  }
+
+  function deleteSelected() {
+    stopPlay();
+    const idx = clips.findIndex((c) => c.id === clipSel);
+    if (idx < 0) return;
+    clips.splice(idx, 1);
+    const next = clips[idx] || clips[idx - 1] || null;
+    clipSel = next ? next.id : null;
+    const total = totalFrames();
+    playhead = total ? Math.min(playhead, total - 1) : 0;
+    renderClips();
+  }
+
+  function reorder(fromId, toId) {
+    if (!fromId || fromId === toId) return;
+    const moving = clips.find((c) => c.id === fromId);
+    if (!moving) return;
+    const rest = clips.filter((c) => c.id !== fromId);
+    const idx = rest.findIndex((c) => c.id === toId);
+    if (idx < 0) return;
+    rest.splice(idx, 0, moving);
+    clips = rest;
+    dragId = null;
+    renderClips();
+  }
+
+  function openEditor() {
+    const model = pack[current];
+    if (!model.video) return;
+    const sc = model.scenes.find((s) => s.id === model.selected) || model.scenes[0];
+    if (!sc) return;
+    editingId = sc.id;
+    const i = model.scenes.findIndex((s) => s.id === sc.id);
+    clips = [{ id: "c" + (++clipSeq), in: 0, out: sc.frames }];
+    clipSel = clips[0].id;
+    playhead = 0;
+    document.getElementById("editTitle").textContent = "Edit · " + current;
+    document.getElementById("editSub").textContent = "Scene " + (i + 1) + " · " + fmtDur(sc.frames);
+    shade.hidden = false;
+    renderClips();
+  }
+
+  function closeEditor(save) {
+    stopPlay();
+    if (save && editingId && clips.length) {
+      const model = pack[current];
+      const idx = model.scenes.findIndex((s) => s.id === editingId);
+      if (idx >= 0) {
+        const made = clips.map((c) => ({ id: nextId++, frames: c.out - c.in }));
+        model.scenes.splice(idx, 1, ...made);
+        model.selected = made[0].id;
+      }
+    }
+    editingId = null;
+    shade.hidden = true;
+    renderStudio();
+  }
+
+  document.getElementById("editOpen").onclick = openEditor;
+  document.getElementById("close").onclick = () => closeEditor(false);
+  document.getElementById("save").onclick = () => closeEditor(true);
+  document.getElementById("back").onclick = () => step(-1);
+  document.getElementById("fwd").onclick = () => step(1);
+  document.getElementById("cut").onclick = cut;
+  document.getElementById("del").onclick = deleteSelected;
+  document.getElementById("play").onclick = () => {
+    if (timer) { stopPlay(); return; }
+    const btn = document.getElementById("play");
+    btn.textContent = "Pause";
+    timer = setInterval(() => {
+      if (playhead >= totalFrames() - 1) { stopPlay(); return; }
+      playhead += 1;
+      const loc = locate(playhead);
+      if (loc) clipSel = loc.clip.id;
+      paintPlayhead();
+    }, 1000 / 15);
+  };
+  document.getElementById("ruler").addEventListener("pointerdown", (e) => {
+    stopPlay();
+    seekAt(e.clientX);
+    const move = (ev) => seekAt(ev.clientX);
+    const up = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+  });
+  document.addEventListener("keydown", (e) => {
+    if (shade.hidden) return;
+    if (e.key === "ArrowLeft") { e.preventDefault(); step(-1); }
+    else if (e.key === "ArrowRight") { e.preventDefault(); step(1); }
+    else if (e.key === "c" || e.key === "C") { e.preventDefault(); cut(); }
+    else if (e.key === "Delete" || e.key === "Backspace") { e.preventDefault(); deleteSelected(); }
+    else if (e.key === " ") { e.preventDefault(); document.getElementById("play").click(); }
+  });
+
+  renderStudio();
+</script>
+</body>
+</html>

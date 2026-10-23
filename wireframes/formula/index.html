@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Formula replacements</title>
+<style>
+  :root {
+    --bg: #0d0e14; --ink: #e8e8e8; --mute: #8b8d98;
+    --line: rgba(255,255,255,.08); --teal: #2dd4bf; --green: #37BD39;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; min-height: 100%;
+    background: var(--bg); color: var(--ink);
+    font: 15px/1.5 ui-sans-serif, system-ui, -apple-system, sans-serif;
+  }
+  a { color: var(--teal); text-decoration: none; }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 36px 24px 80px; }
+  .kicker {
+    font-size: 11px; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--teal); margin-bottom: 8px;
+  }
+  h1 { font-size: 28px; font-weight: 700; letter-spacing: -.02em; margin: 0 0 12px; }
+  .lede { color: var(--mute); max-width: 680px; margin-bottom: 22px; }
+  .hero {
+    background: #12131a; border: 1px solid rgba(45,212,191,.35);
+    border-radius: 16px; padding: 22px; margin-bottom: 22px;
+  }
+  .hero h2 { margin: 0 0 8px; font-size: 22px; }
+  .hero p { margin: 0 0 12px; color: #b4b6c0; }
+  .go {
+    display: inline-block; background: var(--green); color: #041;
+    font-weight: 700; padding: 10px 14px; border-radius: 10px;
+  }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 820px) { .grid { grid-template-columns: 1fr; } }
+  .card {
+    background: #12131a; border: 1px solid var(--line); border-radius: 14px;
+    padding: 18px; color: #b4b6c0; font-size: 14px;
+  }
+  .card h3 { margin: 0 0 6px; color: var(--ink); font-size: 16px; }
+  .tag { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--mute); }
+  .note { margin-top: 22px; font-size: 13px; color: var(--mute); }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="kicker">Rally Builder · formula v2</div>
+    <h1>The formula compiles left to right.</h1>
+    <p class="lede">
+      Still vs take at the top. Frame 1, then prompt engineering, then frame end,
+      then the output. Mute anything. Click a piece and the matching span in the
+      raw prompt flashes. Stills you already made drop into the viewfinders.
+    </p>
+
+    <div class="hero">
+      <div class="tag">Now · from your sketch</div>
+      <h2>Layout</h2>
+      <p>
+        Frame 1 or Ref → Concept / Sound / Voice / Prompt → Frame end or
+        Nothing → compiled prompt → output. Subtle plus dividers. Mute on
+        every piece. Click the frame to pick a still. Type cycles Unique /
+        Frame 1 / Ref (and Nothing / Frame end / Loop). Compiled send
+        flashes the matching span.
+      </p>
+      <a class="go" href="layout.html">Open layout →</a>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <div class="tag">Earlier A</div>
+        <h3><a href="score.html">The Score</a></h3>
+        Mute tokens + one beat field. Keep the mute; the pipeline ate the rest.
+      </div>
+      <div class="card">
+        <div class="tag">Earlier B</div>
+        <h3><a href="pins.html">Pins</a></h3>
+        Sockets around the phone. The viewfinder is that idea, in the formula.
+      </div>
+    </div>
+    <p class="note">Wireframes only. Nothing is wired into the studio yet.</p>
+  </div>
+</body>
+</html>

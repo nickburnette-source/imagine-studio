@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Idea B · Pins</title>
+<style>
+  :root {
+    --bg: #0d0e14; --ink: #e8e8e8; --mute: #8b8d98;
+    --line: rgba(255,255,255,.08); --teal: #2dd4bf; --green: #37BD39;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink);
+    font: 13px/1.4 ui-sans-serif, system-ui, -apple-system, sans-serif; }
+  button, input { font: inherit; color: inherit; }
+  button { cursor: pointer; border: 0; background: none; }
+  .app { height: 100%; display: grid; grid-template-rows: 44px 34px 1fr 92px; }
+  .top, .pack {
+    display: flex; align-items: center; border-bottom: 1px solid var(--line);
+    padding: 0 14px; gap: 10px;
+  }
+  .brand { color: var(--green); font-weight: 700; }
+  .back { color: var(--mute); }
+  .pack { padding: 0; }
+  .clip { flex: 1; text-align: center; padding: 6px 0; color: var(--mute);
+    border-right: 1px solid var(--line); font-size: 10px; letter-spacing: .08em;
+    text-transform: uppercase; }
+  .clip.on { color: var(--ink); background: rgba(45,212,191,.08);
+    box-shadow: inset 0 -2px 0 var(--teal); }
+  .stage {
+    display: grid; grid-template-columns: 140px 1fr 140px; min-height: 0;
+  }
+  .col { padding: 12px; display: flex; flex-direction: column; gap: 8px; overflow: auto; }
+  .lbl { font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--mute); }
+  .mid { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 0; gap: 8px; }
+  .surf { display: flex; background: #16171f; border: 1px solid var(--line); border-radius: 11px; padding: 3px; }
+  .surf b { padding: 6px 18px; border-radius: 8px; font-size: 12px; font-weight: 700; color: var(--mute); }
+  .surf b.on { background: #1c2430; color: var(--ink); }
+  .row3 { display: flex; align-items: center; gap: 10px; }
+  .socket {
+    width: 88px; aspect-ratio: 9/16; border-radius: 12px;
+    border: 1.5px dashed #3a3d4a; background: #16171f;
+    display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+    padding: 8px; gap: 4px; position: relative; overflow: hidden;
+  }
+  .socket.has { border-style: solid; border-color: var(--teal); }
+  .socket.empty { color: var(--mute); }
+  .socket .role {
+    font-size: 10px; font-weight: 750; letter-spacing: .06em; text-transform: uppercase;
+    background: rgba(8,10,16,.85); width: 100%; text-align: center; padding: 4px 0;
+    border-radius: 6px;
+  }
+  .socket.has .role { color: var(--teal); }
+  .socket .ph { font-size: 10px; color: #666; position: absolute; top: 38%; }
+  .fill {
+    position: absolute; inset: 0;
+    background: linear-gradient(160deg,#2a2030,#1a3040);
+  }
+  .fill.b { background: linear-gradient(160deg,#203040,#402020); }
+  .phone {
+    width: min(48vh, 260px); aspect-ratio: 9/16; border-radius: 16px;
+    background: linear-gradient(180deg,#1c2838,#0e1218); border: 1px solid var(--line);
+    box-shadow: 0 16px 40px #0008; position: relative; overflow: hidden;
+  }
+  .phone .cap { position: absolute; left: 10px; bottom: 12px; font-size: 11px; color: #fff9; }
+  .catalog { display: flex; flex-direction: column; gap: 6px; }
+  .cat {
+    width: 72px; aspect-ratio: 9/16; border-radius: 8px; border: 1px solid var(--line);
+    background: linear-gradient(160deg,#222,#333); cursor: grab;
+  }
+  .cat:nth-child(2) { background: linear-gradient(160deg,#203040,#402028); }
+  .cat:nth-child(3) { background: linear-gradient(160deg,#1a2a20,#203018); }
+  .hint { font-size: 11px; color: var(--mute); }
+  .dock {
+    border-top: 1px solid var(--line); display: flex; align-items: stretch; gap: 10px;
+    padding: 10px 16px 14px; background: #0d0e14;
+  }
+  .composer {
+    flex: 1; display: flex; flex-direction: column; gap: 6px;
+    background: #1a1a1a; border: 1px solid #2c2c2c; border-radius: 12px; padding: 8px 10px;
+  }
+  .composer input { background: none; border: 0; outline: none; width: 100%; }
+  .recipe { display: flex; flex-wrap: wrap; gap: 4px; }
+  .pill {
+    font-size: 10px; letter-spacing: .04em; text-transform: uppercase;
+    border: 1px solid #333; border-radius: 999px; padding: 2px 8px; color: var(--mute);
+  }
+  .pill.on { border-color: var(--teal); color: var(--teal); }
+  .pill.off { text-decoration: line-through; opacity: .4; }
+  .go { background: var(--green); color: #041; font-weight: 700; padding: 0 18px; border-radius: 10px; min-width: 7.5rem; }
+  .ghost { border: 1px solid #2c2c2c; padding: 0 14px; border-radius: 10px; }
+  .sheet {
+    position: fixed; left: 50%; bottom: 100px; transform: translateX(-50%);
+    width: min(560px, 92vw); background: #12131a; border: 1px solid var(--line);
+    border-radius: 14px; padding: 14px 16px; box-shadow: 0 20px 60px #000a; z-index: 5;
+  }
+  .sheet h3 { margin: 0 0 8px; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--mute); }
+  .line { display: flex; gap: 8px; align-items: flex-start; padding: 6px 0; border-top: 1px solid var(--line); }
+  .line .k { flex: 0 0 72px; font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--teal); padding-top: 2px; }
+  .line .v { flex: 1; font-size: 12px; color: #d0d2da; }
+  .line.off .v { text-decoration: line-through; opacity: .4; }
+  .x { color: var(--mute); padding: 0 4px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="top">
+    <a class="back" href="index.html">← ideas</a>
+    <span class="brand">DutyCall</span>
+    <span>Friendly Asset Retrieval</span>
+    <span style="margin-left:auto;color:var(--teal);font-size:11px;letter-spacing:.08em;">IDEA B · PINS</span>
+  </div>
+  <div class="pack">
+    <div class="clip">Preview</div>
+    <div class="clip">Rally</div>
+    <div class="clip">Message</div>
+    <div class="clip">Idle</div>
+    <div class="clip on">Accept</div>
+    <div class="clip">Decline</div>
+    <div class="clip">Reschedule</div>
+  </div>
+  <div class="stage">
+    <div class="col">
+      <div class="lbl">Catalog</div>
+      <div class="catalog">
+        <div class="cat" title="Preview"></div>
+        <div class="cat" title="Idle"></div>
+        <div class="cat" title="This clip"></div>
+      </div>
+      <div class="hint">Drag (in the real app) onto a socket. Here: click a socket to cycle empty → that still.</div>
+    </div>
+    <div class="mid">
+      <div class="surf">
+        <b id="stillBtn">Still</b>
+        <b id="takeBtn" class="on">Take</b>
+      </div>
+      <div class="row3">
+        <button class="socket" id="lookSock" data-slot="look">
+          <div class="fill" id="lookFill" hidden></div>
+          <div class="ph" id="lookPh">empty</div>
+          <div class="role">Look</div>
+        </button>
+        <div class="phone">
+          <button class="socket" id="startSock" data-slot="start" style="position:absolute;left:8px;bottom:36px;width:72px;height:auto;aspect-ratio:9/16;z-index:2;">
+            <div class="fill b" id="startFill" hidden></div>
+            <div class="ph" id="startPh">unique</div>
+            <div class="role">Start</div>
+          </button>
+          <span class="cap">Accept · <span id="capSurf">take</span></span>
+        </div>
+        <button class="socket" id="endSock" data-slot="end">
+          <div class="fill" id="endFill" hidden></div>
+          <div class="ph" id="endPh">empty</div>
+          <div class="role">End</div>
+        </button>
+      </div>
+      <div class="hint">Look = identity, never frame 1. Start = pose lock. Empty start = unique shot. End = last-frame pin.</div>
+    </div>
+    <div class="col" style="align-items:flex-start;">
+      <div class="lbl">This layer</div>
+      <div class="hint" id="layerHint">Take pins. Still pins are remembered separately — switch to Still to see them.</div>
+      <div class="hint">Type <b style="color:var(--ink)">/note</b> in the beat to drop a custom line into the receipt.</div>
+    </div>
+  </div>
+  <div class="dock">
+    <div class="composer">
+      <div class="recipe" id="recipe"></div>
+      <input id="beat" value="They take cover, then the charges blow. Camera locked. Rotors overhead." />
+    </div>
+    <button class="ghost" id="receiptBtn">Receipt</button>
+    <button class="go" id="go">Make take</button>
+  </div>
+</div>
+<div class="sheet" id="sheet" hidden></div>
+<script>
+const layers = {
+  still: { look: true, start: false, end: false, notes: [] },
+  take:  { look: true, start: false, end: false, notes: [] },
+};
+let surf = 'take';
+let showSheet = false;
+
+function L(){ return layers[surf]; }
+function cycle(slot){
+  L()[slot] = !L()[slot];
+  render();
+}
+function pills(){
+  const l = L();
+  const beat = document.getElementById('beat').value.trim();
+  const items = [
+    { k:'concept', v:'elite squad abducts a friend for a game', on:true },
+    { k:'look', v: l.look ? 'Preview + Rally.start · identity only' : '', on: l.look },
+    { k:'start', v: l.start ? 'This clip still is frame 1' : 'Unique shot — no frame 1', on: true },
+    { k:'beat', v: beat, on: !!beat },
+    { k:'end', v: l.end ? 'Land on Idle rest' : '', on: l.end },
+  ];
+  if (surf === 'still') items.push({ k:'rules', v:'Single still, 9:16. No captions.', on:true });
+  else items.push({ k:'length', v:'6 seconds', on:true }, { k:'sound', v:'rotors, radio', on:true });
+  l.notes.forEach((n,i) => items.push({ k:'note', v:n, on:true, i }));
+  return items.filter(x => x.v);
+}
+function render(){
+  const l = L();
+  document.getElementById('stillBtn').classList.toggle('on', surf==='still');
+  document.getElementById('takeBtn').classList.toggle('on', surf==='take');
+  document.getElementById('capSurf').textContent = surf;
+  document.getElementById('go').textContent = surf==='still' ? 'Make still' : 'Make take';
+  document.getElementById('layerHint').textContent = surf==='still'
+    ? 'Still pins. Take pins wait on the other layer.'
+    : 'Take pins. Still pins are remembered separately — switch to Still to see them.';
+  [['look', l.look, 'empty', 'Look'],
+   ['start', l.start, 'unique', 'Start'],
+   ['end', l.end, 'empty', 'End']].forEach(([id, on, empty]) => {
+    document.getElementById(id+'Sock').classList.toggle('has', on);
+    document.getElementById(id+'Fill').hidden = !on;
+    document.getElementById(id+'Ph').textContent = on ? '' : empty;
+    document.getElementById(id+'Ph').hidden = on;
+  });
+  document.getElementById('recipe').innerHTML = pills().map(p =>
+    `<span class="pill ${p.on?'on':'off'}">${p.k}</span>`
+  ).join('');
+  const sheet = document.getElementById('sheet');
+  sheet.hidden = !showSheet;
+  if (showSheet) {
+    sheet.innerHTML = `<h3>Receipt · what Imagine gets · ${surf}</h3>` +
+      pills().map((p,i) =>
+        `<div class="line ${p.on?'':'off'}"><div class="k">${p.k}</div><div class="v">${p.v}</div>
+         <button class="x" data-i="${i}">×</button></div>`
+      ).join('') +
+      `<div style="margin-top:8px;display:flex;justify-content:flex-end"><button class="ghost" id="closeSheet" style="padding:8px 12px">Close</button></div>`;
+    sheet.querySelector('#closeSheet').onclick = () => { showSheet=false; render(); };
+    sheet.querySelectorAll('.x').forEach(b => b.onclick = () => {
+      const item = pills()[+b.dataset.i];
+      if (item.k === 'look') L().look = false;
+      if (item.k === 'end') L().end = false;
+      if (item.k === 'note') L().notes.splice(item.i, 1);
+      render();
+    });
+  }
+}
+['look','start','end'].forEach(s => {
+  document.getElementById(s+'Sock').onclick = () => cycle(s);
+});
+document.getElementById('stillBtn').onclick = () => { surf='still'; render(); };
+document.getElementById('takeBtn').onclick = () => { surf='take'; render(); };
+document.getElementById('receiptBtn').onclick = () => { showSheet = !showSheet; render(); };
+document.getElementById('beat').oninput = render;
+document.getElementById('beat').addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    const v = e.target.value;
+    const m = v.match(/\/note\s+(.+)$/i);
+    if (m) {
+      e.preventDefault();
+      L().notes.push(m[1].trim());
+      e.target.value = v.replace(/\/note\s+.+$/i, '').trim();
+      render();
+    }
+  }
+});
+document.getElementById('go').onclick = () => {
+  alert((surf==='still'?'Make still':'Make take') + ' would send:\n\n' +
+    pills().filter(p=>p.on).map(p => p.k.toUpperCase()+'\n'+p.v).join('\n\n'));
+};
+render();
+</script>
+</body>
+</html>

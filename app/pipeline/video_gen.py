@@ -59,48 +59,23 @@ def _path_to_data_url(path: Path) -> str:
     return f"data:{mime};base64,{base64.b64encode(raw).decode('ascii')}"
 
 
-def _video_duration_seconds(video: Path) -> float:
-    import shutil
-    import subprocess
-
-    ffprobe = shutil.which("ffprobe")
-    if not ffprobe:
-        return 0.0
-    result = subprocess.run(
-        [
-            ffprobe,
-            "-v",
-            "error",
-            "-show_entries",
-            "format=duration",
-            "-of",
-            "default=nw=1:nk=1",
-            str(video),
-        ],
-        capture_output=True,
-        text=True,
-    )
-    try:
-        return float((result.stdout or "").strip() or "0")
-    except ValueError:
-        return 0.0
-
-
 def _trim_for_edit(video: Path) -> Path:
     """Imagine edits cap input at 8.7s. Copy/trim to a sibling if needed."""
     import shutil
     import subprocess
 
-    dur = _video_duration_seconds(video)
+    from app.pipeline.boomerang import video_duration_seconds
+
+    dur = video_duration_seconds(video)
     if dur <= EDIT_MAX_SECONDS + 0.05:
         return video
     ffmpeg = shutil.which("ffmpeg")
     if not ffmpeg:
         raise RuntimeError(
-            f"{video.name} is {dur:.1f}s — an edit needs ≤ {EDIT_MAX_SECONDS}s "
+            f"{video.name} is {dur:.1f}s — Nudge needs ≤ {EDIT_MAX_SECONDS}s "
             "(and ffmpeg to trim)"
         )
-    dest = video.with_name(video.stem + ".edit-src.mp4")
+    dest = video.with_name(video.stem + ".nudge-src.mp4")
     result = subprocess.run(
         [
             ffmpeg,
@@ -120,7 +95,7 @@ def _trim_for_edit(video: Path) -> Path:
     )
     if result.returncode != 0 or not dest.is_file() or dest.stat().st_size < 1000:
         err = (result.stderr or result.stdout or "")[-400:]
-        raise RuntimeError(f"Could not trim {video.name} for edit:\n{err}")
+        raise RuntimeError(f"Could not trim {video.name} for Nudge:\n{err}")
     return dest
 
 
@@ -336,12 +311,12 @@ async def edit_video(
     chosen = EDIT_VIDEO_MODEL
     if model and "1.5" in model:
         await emit(
-            "Edit uses grok-imagine-video (Classic) — "
+            "Nudge uses grok-imagine-video (Classic) — "
             "Video 1.5 cannot edit an existing take"
         )
     elif "1.5" in imagine_settings.video_model():
         await emit(
-            "Edit uses grok-imagine-video (Classic) — "
+            "Nudge uses grok-imagine-video (Classic) — "
             "Video 1.5 cannot edit an existing take"
         )
 
@@ -379,7 +354,7 @@ async def edit_video(
             low = detail.lower()
             if "not support" in low:
                 raise RuntimeError(
-                    "Imagine refused the edit. Edits only work with "
+                    "Imagine refused the edit. Nudge only works with "
                     "grok-imagine-video (Classic), clips ≤ 8.7s. "
                     f"API: {detail}"
                 )
