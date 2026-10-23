@@ -7,7 +7,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-# Load rally-builder .env when present (repo root = parent of content_store/)
+# Load the Imagine Studio .env when present (repo root = parent of content_store/)
 _REPO = Path(__file__).resolve().parent.parent
 load_dotenv(_REPO / ".env")
 

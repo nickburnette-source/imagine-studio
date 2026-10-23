@@ -3380,7 +3380,7 @@ def mount() -> None:
         ui.run_javascript(
             """
             (() => {
-              const KEY = 'rallyBuilder.videoMuted';
+              const KEY = 'imagineStudio.videoMuted';
               const prefer = localStorage.getItem(KEY);
               const muted = prefer === null ? true : prefer === '1';
               const editorOpen = !!document.getElementById('rb-scene-shade');

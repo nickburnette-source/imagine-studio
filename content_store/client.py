@@ -1,4 +1,4 @@
-"""Tiny client for local rally-builder code to call the content-store API."""
+"""Tiny client for Imagine Studio to call the content-store API."""
 
 from __future__ import annotations
 

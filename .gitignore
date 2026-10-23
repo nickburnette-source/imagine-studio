@@ -1,8 +1,6 @@
 # Working output
 rallies/
 *.log
-.rally-builder.pid
-.rally-builder.log
 .imagine-studio.pid
 .imagine-studio.log
 

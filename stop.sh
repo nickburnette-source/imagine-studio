@@ -50,22 +50,14 @@ stop_pid() {
   return 0
 }
 
-# 1) PID file from start.sh, then the previous filename if that process
-#    is this checkout (never a different app that reused the old name).
-for pid_file in "$PID_FILE" "$ROOT/.rally-builder.pid"; do
-  [[ -f "$pid_file" ]] || continue
-  pid="$(tr -d '[:space:]' <"$pid_file" || true)"
-  if [[ "$pid_file" == "$ROOT/.rally-builder.pid" && -n "${pid:-}" ]]; then
-    cwd="$(lsof -a -p "$pid" -d cwd -Fn 2>/dev/null | sed -n 's/^n//p' | head -1 || true)"
-    if [[ -n "${cwd:-}" && "$cwd" != "$ROOT" ]]; then
-      continue
-    fi
-  fi
+# 1) PID file from start.sh
+if [[ -f "$PID_FILE" ]]; then
+  pid="$(tr -d '[:space:]' <"$PID_FILE" || true)"
   if stop_pid "$pid" "Imagine Studio"; then
     stopped=1
   fi
-  rm -f "$pid_file"
-done
+  rm -f "$PID_FILE"
+fi
 
 # 2) Anything still listening on the app port (orphans / other starts)
 if command -v lsof >/dev/null 2>&1; then

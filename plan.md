@@ -1,6 +1,6 @@
-# Rally Builder — Local GUI Plan
+# Archived pipeline notes
 
-> This file is the old Rally Builder plan. Imagine Studio is one clip: an editor, a timeline, and a final take you can play and download. It does not use the seven-step pack, gates, or DutyCall publish. See [README.md](./README.md).
+> Not the Imagine Studio product. Imagine Studio is one clip: an editor, a timeline, and a final take you can play and download. See [README.md](./README.md). The sections below are history from an older multi-step pack. They are not how this repo works.
 
 A **local desktop GUI** that runs a **gated generation pipeline** for DutyCall Rally skins: human-approved steps by default, with a future **auto mode** once one-shot quality is good enough.
 
@@ -293,7 +293,7 @@ Save wraps these; do not reimplement ffmpeg in v1.
 ### Project layout (proposed)
 
 ```
-rally-builder/
+imagine-studio/
   plan.md
   SKILL.md
   cmprssRally.sh

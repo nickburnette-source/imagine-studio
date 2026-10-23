@@ -58,31 +58,16 @@ else
   exit 1
 fi
 
-# Already running? Also honor a pid written by the previous script name.
-old=""
+# Already running?
 if [[ -f "$PID_FILE" ]]; then
   old="$(tr -d '[:space:]' <"$PID_FILE" 2>/dev/null || true)"
-fi
-if [[ -n "${old:-}" ]] && kill -0 "$old" 2>/dev/null; then
-  :
-else
-  old=""
-  if [[ -f "$ROOT/.rally-builder.pid" ]]; then
-    legacy="$(tr -d '[:space:]' <"$ROOT/.rally-builder.pid" 2>/dev/null || true)"
-    if [[ -n "${legacy:-}" ]] && kill -0 "$legacy" 2>/dev/null; then
-      legacy_cwd="$(lsof -a -p "$legacy" -d cwd -Fn 2>/dev/null | sed -n 's/^n//p' | head -1 || true)"
-      if [[ -z "${legacy_cwd:-}" || "$legacy_cwd" == "$ROOT" ]]; then
-        old="$legacy"
-      fi
-    fi
+  if [[ -n "${old:-}" ]] && kill -0 "$old" 2>/dev/null; then
+    echo "Imagine Studio already running (pid $old) → http://${HOST}:${PORT}"
+    echo "Stop with: ./stop.sh"
+    exit 0
   fi
+  rm -f "$PID_FILE"
 fi
-if [[ -n "${old:-}" ]] && kill -0 "$old" 2>/dev/null; then
-  echo "Imagine Studio already running (pid $old) → http://${HOST}:${PORT}"
-  echo "Stop with: ./stop.sh"
-  exit 0
-fi
-rm -f "$PID_FILE"
 
 if command -v lsof >/dev/null 2>&1; then
   if lsof -nP -iTCP:"$PORT" -sTCP:LISTEN >/dev/null 2>&1; then
