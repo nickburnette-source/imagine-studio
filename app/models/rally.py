@@ -181,8 +181,14 @@ def clip_label(step_id: str) -> str:
 
 
 def _is_clip_working_still(name: str) -> bool:
+    """Opening stills stay put when a take is regenerated.
+
+    The one-clip opening still is ``start.png``. A suffix check for
+    ``.start.png`` misses that name, so Make would archive the still
+    and then report that the take has nothing to open on.
+    """
     n = Path(name).name.lower()
-    return n.endswith(".start.png") or n in {
+    return n == "start.png" or n.endswith(".start.png") or n in {
         "idlekeyframe.png",
         "idle.last.png",
         "preview.clean.png",
