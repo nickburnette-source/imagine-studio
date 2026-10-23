@@ -266,7 +266,7 @@ class RallyPackage(BaseModel):
             return label
         if label and label != slug:
             return label
-        return slug.replace("-", " ").title() or "Untitled Rally"
+        return slug.replace("-", " ").title() or "Untitled"
 
     def ensure_display_name(self) -> str:
         title = self.rally_title()

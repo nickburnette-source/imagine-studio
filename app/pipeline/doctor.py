@@ -9,11 +9,8 @@ from dataclasses import dataclass
 
 from app.config import (
     COMPRESS_SCRIPT_IOS,
-    DUTYCALL_PRIVATE_FOLDER,
-    DUTYCALL_S3_BUCKET,
     GENERATE_BACKEND,
     OUTPUT_DIR,
-    S3_BUCKET,
     SKILL_PATH,
     STEP_PROMPTS_PATH,
     XAI_API_KEY,
@@ -57,7 +54,7 @@ def run_doctor() -> list[Check]:
             if r.returncode == 0:
                 checks.append(
                     Check(
-                        "aws SSO",
+                        "AWS credentials",
                         True,
                         f"profile={profile} · identity ok",
                     )
@@ -72,15 +69,19 @@ def run_doctor() -> list[Check]:
                     )
                 checks.append(
                     Check(
-                        "aws SSO",
+                        "AWS credentials",
                         False,
                         f"profile={profile} · {(err[:100] or 'auth failed')}{hint}",
                     )
                 )
         except Exception as exc:  # noqa: BLE001
-            checks.append(Check("aws SSO", False, f"profile={profile} · {exc}"))
+            checks.append(
+                Check("AWS credentials", False, f"profile={profile} · {exc}")
+            )
     else:
-        checks.append(Check("aws SSO", False, "aws CLI not found on PATH"))
+        checks.append(
+            Check("AWS credentials", False, "aws CLI not found on PATH")
+        )
 
     if GENERATE_BACKEND == "api":
         checks.append(
@@ -184,30 +185,6 @@ def run_doctor() -> list[Check]:
             )
     except Exception as exc:  # noqa: BLE001
         checks.append(Check("content S3 (video staging)", False, str(exc)))
-
-    checks.append(
-        Check(
-            "DutyCall drive bucket",
-            bool(DUTYCALL_S3_BUCKET),
-            DUTYCALL_S3_BUCKET
-            or "AWS_DUTYCALL_S3_BUCKET_ARN not set (publish will fail)",
-        )
-    )
-    checks.append(
-        Check(
-            "Private folder id",
-            bool(DUTYCALL_PRIVATE_FOLDER),
-            DUTYCALL_PRIVATE_FOLDER
-            or "AWS_DUTYCALL_PRIVATE_FOLDER unset (private publish disabled)",
-        )
-    )
-    checks.append(
-        Check(
-            "S3 bucket (legacy/content)",
-            bool(S3_BUCKET),
-            S3_BUCKET or "RALLY_S3_BUCKET not set (optional staging)",
-        )
-    )
 
     try:
         OUTPUT_DIR.mkdir(parents=True, exist_ok=True)

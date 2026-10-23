@@ -1,7 +1,7 @@
 [project]
-name = "rally-builder"
+name = "imagine-studio"
 version = "0.1.0"
-description = "Local GUI for gated DutyCall Rally skin generation"
+description = "Local editor for one Imagine clip: prompt, timeline, and a final take."
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
@@ -16,7 +16,7 @@ dependencies = [
 ]
 
 [project.scripts]
-rally-builder = "app.main:main"
+imagine-studio = "app.main:main"
 content-store = "content_store.__main__:main"
 
 [build-system]

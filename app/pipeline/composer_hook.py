@@ -1,7 +1,8 @@
-"""Import overlays for the tone-first Grok composer.
+"""Optional import overlay for an older local venv hook.
 
-Existing app/*.py files are sandbox-locked; these next-modules are what
-the running app should load. Installed via a .pth in the venv.
+The base modules (studio, prompts, generate, expand) already load the live
+implementations. This hook remains so a machine that still has the venv
+.pth keeps loading those same files. It never falls through to another repo.
 """
 
 from __future__ import annotations
@@ -12,24 +13,21 @@ import importlib.util
 import sys
 from pathlib import Path
 
-_DEFAULT_ROOT = Path("/Users/nick/Documents/rally-builder")
-
 
 def _root() -> Path:
-    # This repo first. The old Rally Builder path is only a fallback.
-    cands = [Path(__file__).resolve().parents[2]]
+    here = Path(__file__).resolve().parents[2]
+    cands = [here]
     try:
         cands.append(Path.cwd())
     except OSError:
         pass
-    cands.append(_DEFAULT_ROOT)
     for cand in cands:
         try:
             if (cand / "app/pipeline/expand_next.py").is_file():
                 return cand
         except OSError:
             continue
-    return _DEFAULT_ROOT
+    return here
 
 
 def _overlays() -> dict[str, Path]:

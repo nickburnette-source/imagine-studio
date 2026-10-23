@@ -1,18 +1,18 @@
 #!/usr/bin/env bash
-# Start Rally Builder (NiceGUI) on RALLY_HOST:RALLY_PORT from .env
+# Start Imagine Studio (NiceGUI) on RALLY_HOST:RALLY_PORT from .env
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$ROOT"
 
-PID_FILE="$ROOT/.rally-builder.pid"
-LOG_FILE="$ROOT/.rally-builder.log"
+PID_FILE="$ROOT/.imagine-studio.pid"
+LOG_FILE="$ROOT/.imagine-studio.log"
 
 # Load .env (simple KEY=VALUE; ignores comments / blanks)
 if [[ -f "$ROOT/.env" ]]; then
   set -a
   # bash 3.2 (macOS) cannot source a process substitution, so RALLY_PORT
-  # never loaded and this app tried to bind 8080, which Rally Builder uses.
+  # never loaded and this app tried to bind the wrong port.
   _env_tmp="$(mktemp)"
   grep -E '^[A-Za-z_][A-Za-z0-9_]*=' "$ROOT/.env" | sed 's/\r$//' > "$_env_tmp"
   # shellcheck disable=SC1090
@@ -23,7 +23,7 @@ if [[ -f "$ROOT/.env" ]]; then
 fi
 
 HOST="${RALLY_HOST:-127.0.0.1}"
-PORT="${RALLY_PORT:-8080}"
+PORT="${RALLY_PORT:-8070}"
 # Default: foreground. Pass --bg / -d / --daemon to background.
 BACKGROUND=0
 for arg in "$@"; do
@@ -34,14 +34,14 @@ for arg in "$@"; do
 Usage: ./start.sh [--bg]
 
   (default)   Run in the foreground. Ctrl+C stops cleanly.
-  --bg / -d   Run in the background; logs → .rally-builder.log
+  --bg / -d   Run in the background; logs → .imagine-studio.log
               Stop with ./stop.sh
 
 Env (from .env if present):
   RALLY_HOST          default 127.0.0.1
-  RALLY_PORT          default 8080
+  RALLY_PORT          default 8070
   RALLY_OPEN_BROWSER  1 reuse/reload one Chrome tab (0 = don't open)
-  AWS_PROFILE         used by S3 publish
+  AWS_PROFILE         optional; video staging uses the default AWS chain
 EOF
       exit 0
       ;;
@@ -58,16 +58,31 @@ else
   exit 1
 fi
 
-# Already running?
+# Already running? Also honor a pid written by the previous script name.
+old=""
 if [[ -f "$PID_FILE" ]]; then
-  old="$(cat "$PID_FILE" 2>/dev/null || true)"
-  if [[ -n "${old:-}" ]] && kill -0 "$old" 2>/dev/null; then
-    echo "Rally Builder already running (pid $old) → http://${HOST}:${PORT}"
-    echo "Stop with: ./stop.sh"
-    exit 0
-  fi
-  rm -f "$PID_FILE"
+  old="$(tr -d '[:space:]' <"$PID_FILE" 2>/dev/null || true)"
 fi
+if [[ -n "${old:-}" ]] && kill -0 "$old" 2>/dev/null; then
+  :
+else
+  old=""
+  if [[ -f "$ROOT/.rally-builder.pid" ]]; then
+    legacy="$(tr -d '[:space:]' <"$ROOT/.rally-builder.pid" 2>/dev/null || true)"
+    if [[ -n "${legacy:-}" ]] && kill -0 "$legacy" 2>/dev/null; then
+      legacy_cwd="$(lsof -a -p "$legacy" -d cwd -Fn 2>/dev/null | sed -n 's/^n//p' | head -1 || true)"
+      if [[ -z "${legacy_cwd:-}" || "$legacy_cwd" == "$ROOT" ]]; then
+        old="$legacy"
+      fi
+    fi
+  fi
+fi
+if [[ -n "${old:-}" ]] && kill -0 "$old" 2>/dev/null; then
+  echo "Imagine Studio already running (pid $old) → http://${HOST}:${PORT}"
+  echo "Stop with: ./stop.sh"
+  exit 0
+fi
+rm -f "$PID_FILE"
 
 if command -v lsof >/dev/null 2>&1; then
   if lsof -nP -iTCP:"$PORT" -sTCP:LISTEN >/dev/null 2>&1; then
@@ -84,7 +99,7 @@ if ! "$PYTHON" -c "import app" 2>/dev/null; then
   "$PYTHON" -m pip install -e . -q
 fi
 
-echo "Starting Rally Builder"
+echo "Starting Imagine Studio"
 echo "  python: $PYTHON"
 echo "  url:    http://${HOST}:${PORT}"
 echo "  cwd:    $ROOT"

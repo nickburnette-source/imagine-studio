@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
-# Stop Rally Builder started by ./start.sh (or anything listening on RALLY_PORT)
+# Stop Imagine Studio started by ./start.sh (or anything listening on RALLY_PORT)
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$ROOT"
 
-PID_FILE="$ROOT/.rally-builder.pid"
-LOG_FILE="$ROOT/.rally-builder.log"
+PID_FILE="$ROOT/.imagine-studio.pid"
+LOG_FILE="$ROOT/.imagine-studio.log"
 
 if [[ -f "$ROOT/.env" ]]; then
   set -a
   # bash 3.2 (macOS) cannot source a process substitution, so RALLY_PORT
-  # never loaded and stop.sh would kill whatever is on 8080.
+  # never loaded and stop.sh would use the wrong port.
   _env_tmp="$(mktemp)"
   grep -E '^[A-Za-z_][A-Za-z0-9_]*=' "$ROOT/.env" | sed 's/\r$//' > "$_env_tmp"
   # shellcheck disable=SC1090
@@ -21,7 +21,7 @@ if [[ -f "$ROOT/.env" ]]; then
   set +a
 fi
 
-PORT="${RALLY_PORT:-8080}"
+PORT="${RALLY_PORT:-8070}"
 stopped=0
 
 stop_pid() {
@@ -50,14 +50,22 @@ stop_pid() {
   return 0
 }
 
-# 1) PID file from start.sh
-if [[ -f "$PID_FILE" ]]; then
-  pid="$(tr -d '[:space:]' <"$PID_FILE" || true)"
-  if stop_pid "$pid" "Rally Builder (pid file)"; then
+# 1) PID file from start.sh, then the previous filename if that process
+#    is this checkout (never a different app that reused the old name).
+for pid_file in "$PID_FILE" "$ROOT/.rally-builder.pid"; do
+  [[ -f "$pid_file" ]] || continue
+  pid="$(tr -d '[:space:]' <"$pid_file" || true)"
+  if [[ "$pid_file" == "$ROOT/.rally-builder.pid" && -n "${pid:-}" ]]; then
+    cwd="$(lsof -a -p "$pid" -d cwd -Fn 2>/dev/null | sed -n 's/^n//p' | head -1 || true)"
+    if [[ -n "${cwd:-}" && "$cwd" != "$ROOT" ]]; then
+      continue
+    fi
+  fi
+  if stop_pid "$pid" "Imagine Studio"; then
     stopped=1
   fi
-  rm -f "$PID_FILE"
-fi
+  rm -f "$pid_file"
+done
 
 # 2) Anything still listening on the app port (orphans / other starts)
 if command -v lsof >/dev/null 2>&1; then
@@ -87,7 +95,7 @@ if command -v pgrep >/dev/null 2>&1; then
 fi
 
 if [[ "$stopped" -eq 1 ]]; then
-  echo "Rally Builder is stopped."
+  echo "Imagine Studio is stopped."
   if [[ -f "$LOG_FILE" ]]; then
     echo "  log kept at $LOG_FILE"
   fi

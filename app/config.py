@@ -39,7 +39,8 @@ def _path(env_key: str, default: Path) -> Path:
 
 OUTPUT_DIR = _path("RALLY_OUTPUT_DIR", REPO_ROOT / "rallies")
 HOST = os.getenv("RALLY_HOST", "127.0.0.1")
-PORT = int(os.getenv("RALLY_PORT", "8080"))
+# 8070 leaves 8080 free for another local app.
+PORT = int(os.getenv("RALLY_PORT", "8070"))
 # stub | cli (subscription via `grok login`) | api (XAI_API_KEY billing)
 GENERATE_BACKEND = os.getenv("RALLY_GENERATE_BACKEND", "cli").lower()
 

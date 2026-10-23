@@ -1,4 +1,4 @@
-"""Main pipeline studio UI."""
+"""Imagine Studio editor."""
 
 from __future__ import annotations
 
@@ -348,12 +348,9 @@ def mount() -> None:
             "items-center justify-between px-4 dc-header"
         ):
             with ui.row().classes("items-center gap-2"):
-                ui.label("DutyCall").classes(
+                ui.label("Imagine Studio").classes(
                     "text-h6 text-weight-bold"
                 ).style("color: #37BD39; letter-spacing: 0.02em;")
-                ui.label("Rally Builder").classes(
-                    "text-subtitle1 text-grey-5"
-                )
             with ui.row().classes("items-center gap-2"):
                 _activity_center()
                 ui.button(
@@ -402,7 +399,7 @@ def mount() -> None:
             if not (root / "meta.json").exists():
                 _push_notice(
                     "error",
-                    f"Rally “{rally}” not found",
+                    f"Project “{rally}” not found",
                     rally=rally,
                     step=step,
                 )
@@ -668,7 +665,7 @@ def mount() -> None:
         ):
             # ── Create card ──────────────────────────────────────
             with ui.element("div").classes("dc-card w-full q-pa-md"):
-                ui.label("New rally").classes(
+                ui.label("New project").classes(
                     "text-h6 text-weight-medium q-mb-md"
                 )
 
@@ -689,12 +686,12 @@ def mount() -> None:
                     .classes("w-full dc-input")
                     .props(
                         "outlined dense dark autogrow "
-                        'placeholder="Who or what this rally is, and the vibe"'
+                        'placeholder="What this is, and the vibe"'
                     )
                 )
                 concept_in.bind_value(form, "concept")
                 ui.label(
-                    "Start pipeline opens the editor with this concept."
+                    "Opens the editor with this concept."
                 ).classes("dc-hint")
 
                 ui.label("Aspect").classes("dc-field-title q-mt-md")
@@ -705,7 +702,7 @@ def mount() -> None:
                 )
                 aspect.bind_value(form, "aspect")
                 ui.label(
-                    "Phone skins use 9:16 · square for rare square packs"
+                    "9:16 is portrait · 1:1 is square"
                 ).classes("dc-hint")
 
                 def open_pipeline() -> None:
@@ -718,7 +715,7 @@ def mount() -> None:
                         )
                         return
                     typed = (
-                        form.get("name") or concept[:48] or "rally"
+                        form.get("name") or concept[:48] or "project"
                     ).strip()
                     name = slugify(typed)
                     root = OUTPUT_DIR / name
@@ -745,12 +742,12 @@ def mount() -> None:
                     _brief_open = False
                     _brief = None
                     clear_brief_store()
-                    ui.notify(f"Pipeline ready · {name}", type="positive")
+                    ui.notify(f"Ready · {name}", type="positive")
                     ui.navigate.to("/")
 
                 with ui.column().classes("w-full q-mt-lg gap-2"):
                     ui.button(
-                        "Start pipeline",
+                        "Open editor",
                         icon="play_arrow",
                         on_click=open_pipeline,
                     ).classes("w-full dc-cta").props(
@@ -761,7 +758,7 @@ def mount() -> None:
             ui.label("Recent").classes("text-h6 text-weight-medium")
             rallies = list_rallies(OUTPUT_DIR)
             if not rallies:
-                ui.label("No rallies yet — create one above.").classes(
+                ui.label("No projects yet — create one above.").classes(
                     "text-grey-6"
                 )
             else:
@@ -975,7 +972,7 @@ def mount() -> None:
                 _brief_open = False
                 _brief = None
                 clear_brief_store()
-                ui.notify(f"Pipeline ready · {name}", type="positive")
+                ui.notify(f"Ready · {name}", type="positive")
                 ui.navigate.to("/")
 
             with ui.element("div").classes("rb-brief-sticky w-full"):
@@ -1005,7 +1002,7 @@ def mount() -> None:
                         ).props("outline no-caps")
                     )
                     ui.button(
-                        "Start pipeline",
+                        "Open editor",
                         icon="play_arrow",
                         on_click=start_pipeline,
                     ).classes("col dc-cta").props(
@@ -1020,11 +1017,9 @@ def mount() -> None:
             pkg = RallyPackage.load(path)
             title = pkg.rally_title()
             subtitle = (pkg.concept or "").strip()
-            tmpl = getattr(pkg, "template", "character") or "character"
         except Exception:  # noqa: BLE001
             title = path.name
             subtitle = ""
-            tmpl = ""
 
         from urllib.parse import quote
 
@@ -1104,15 +1099,13 @@ def mount() -> None:
                 ui.button(icon="delete_outline")
                 .props("flat dense round size=sm color=grey")
                 .classes("dc-rally-del")
-                .tooltip("Delete rally")
+                .tooltip("Delete project")
             )
             del_btn.on("click.stop", ask_delete)
             with ui.element("div").classes("dc-rally-meta"):
                 ui.label(title).classes("dc-rally-title")
                 if subtitle:
                     ui.label(subtitle).classes("dc-rally-sub")
-                if tmpl:
-                    ui.label(tmpl).classes("dc-rally-tmpl")
 
     def _studio_view() -> None:
         shell = ui.element("div").classes("rb-shell")
@@ -1192,14 +1185,15 @@ def mount() -> None:
                     "overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
                 )
                 if phase != "edit":
-                    tmpl = getattr(pkg, "template", "character") or "character"
                     concept_bit = (pkg.concept or "").strip().replace("\n", " ")
-                    sub = tmpl if not concept_bit else f"{tmpl} · {concept_bit}"
-                    ui.label(sub).classes("text-caption text-grey-6").style(
-                        "font-size: 0.65rem; line-height: 1.2; "
-                        "overflow: hidden; text-overflow: ellipsis; "
-                        "white-space: nowrap;"
-                    )
+                    if concept_bit:
+                        ui.label(concept_bit).classes(
+                            "text-caption text-grey-6"
+                        ).style(
+                            "font-size: 0.65rem; line-height: 1.2; "
+                            "overflow: hidden; text-overflow: ellipsis; "
+                            "white-space: nowrap;"
+                        )
 
             job_chip = ui.element("div").classes("rb-chrome-job is-off")
             with job_chip:
@@ -3601,7 +3595,7 @@ _HEAD_CSS = """
     border-top: 1px solid #2C2C2C;
     padding: 0.75rem 0 0.5rem;
   }
-  /* DutyCall landing (lib/themes.dart) */
+  /* Home landing */
   .dc-header {
     background: #111111 !important;
     border-bottom: 1px solid #2C2C2C;

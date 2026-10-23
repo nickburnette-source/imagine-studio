@@ -1,149 +1,97 @@
-# Rally Builder
+# Imagine Studio
 
-Local GUI for creating **DutyCall Rally** skins with a **human-gated pipeline**:
+Local editor for one Imagine clip. You write a concept, shape the shot, cut a timeline, then play the finished take full screen and download it.
 
-```
-Concept → Preview (approve) → Idle still+loop (approve) → branch clips → Save (ffmpeg + S3)
-```
-
-Creative rules live in [`SKILL.md`](./SKILL.md). Product plan: [`plan.md`](./plan.md).
+This is not a multi-step pack and it does not publish anywhere. Projects on disk still live in `rallies/` so existing folders keep working.
 
 ## Quick start
 
 ```bash
-cd rally-builder
+cd imagine-studio
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -e .
 
-# optional
-cp .env.example .env
+cp .env.example .env   # set CONTENT_S3_BUCKET and AWS credentials for real video
 
-rally-builder
-# or: python -m app.main
+python -m app.main
+# or: imagine-studio
 ```
 
-Open **http://127.0.0.1:8080**.
+Open **http://127.0.0.1:8070**.
+
+`./start.sh` runs it in the foreground. `./start.sh --bg` backgrounds it and writes `.imagine-studio.pid`. `./stop.sh` stops that process.
+
+## What you do
+
+1. **New project** — name, concept, and aspect (9:16 or 1:1).
+2. **Editor** — one shot. Prompt rows, reference images, length, quality, and the scene timeline (cut, join, reorder, regenerate, nudge, new scene).
+3. **Final** — full-screen playback of the stitched take, and a download.
+
+There is no step stepper and no approve-to-advance gate.
 
 ## Generation backends
 
 | Backend | How media is made | Credentials | When |
 |---------|-------------------|-------------|------|
-| **`cli`** (default) | **Direct** Imagine SDK/REST in-process (no Grok agent, no Terminal) | `grok login` session (or `XAI_API_KEY` if set) | Solo / subscription |
-| `api` | Same direct Imagine path | Prefer `XAI_API_KEY` | Metered / multi-user |
+| **`cli`** (default) | Imagine REST in-process | `grok login` session (or `XAI_API_KEY` if set) | Solo / subscription |
+| `api` | Same Imagine path | `XAI_API_KEY` | Metered / multi-user |
 | `stub` | Pillow + ffmpeg placeholders | none | Offline UI testing |
 
-There is **no interpretive Grok CLI session** for generate. `grok login` is only used
-to obtain a bearer token stored in `~/.grok/auth.json`.
+`grok login` is only used to obtain a bearer token in `~/.grok/auth.json`. Generation does not open a Grok agent or a Terminal window.
 
-### Video + ZDR (content store)
+### Video staging
 
-Under Zero Data Retention, Imagine will not host video URLs. The app always:
+Under Zero Data Retention, Imagine will not host video URLs. The app:
 
-1. Mints an S3 **presigned PUT** under `CONTENT_S3_PREFIX` (default `staging/`)
+1. Mints an S3 presigned PUT under `CONTENT_S3_PREFIX` (default `staging/`)
 2. Calls `POST /v1/videos/generations` with `output.upload_url`
-3. Downloads the object into the rally folder
+3. Downloads the object into the project folder
 
-Requires `CONTENT_S3_BUCKET` and AWS credentials that can Put/Get/Delete on
-that prefix. An IAM access key in `.env` is enough. See
-[`.env.example`](./.env.example) and [`content_store/README.md`](content_store/README.md).
-
-### CLI backend (recommended for solo use)
-
-```bash
-# once
-grok login
-
-cp .env.example .env   # set CONTENT_S3_BUCKET and an AWS access key
-source .venv/bin/activate
-pip install -e .
-python -m app.main
-```
-
-All generation runs **behind the scenes** in the web app process: progress banner
-updates in place, then the stage refreshes with cache-busted media. No Terminal
-windows.
-
-### API backend (optional)
-
-```bash
-# .env
-RALLY_GENERATE_BACKEND=api
-XAI_API_KEY=xai-...
-CONTENT_S3_BUCKET=…
-```
-
-| Step | Call |
-|------|------|
-| **Preview** | Text → image |
-| **Idle** | Edit from Preview → still; then image→video (S3 staging); last frame seeds reactions |
-| **Branch** | Rally/Message: image→video from Preview, ending on Idle rest. Reactions: image→video from Idle’s last frame |
-
-## Pipeline (human mode)
-
-| Stage | What you do |
-|-------|-------------|
-| **Invent scenes** | Type a concept, pick Character / Scene / Craft. Grok writes Imagine shot briefs per clip. Review and edit **before** anything generates |
-| **Preview** | Edit base + custom prompts → Generate → review still → **Approve** |
-| **Idle** | Lock ready pose (`IdleKeyframe.png` + `Idle.mp4`) → **Approve** |
-| **Branch** | Rally / Message / Accept / Decline / Adjust — each with its own prompts |
-| **Final review** | When every step is approved: fullscreen autoplay of all assets (no gaps) |
-| **Publish** | After final review: compress + S3 upload as **Free** or **Premium** |
-
-Each step has:
-
-- **Concept** — what the rally is about; **Compose beats** asks Grok to write on-theme custom guidance for every clip (send / incoming / wait / yes / no / later as in-world action)
-- **Base prompt** — short optional beat (from `defaults/templates/`, editable)
-- **Custom guidance** — what happens between start and end
-- **Composed prompt** — subject + look lock + START/END/TRANSITION harness + beat + custom
+Requires `CONTENT_S3_BUCKET` and AWS credentials that can Put/Get/Delete on that prefix. An IAM access key in `.env` is enough. See [`.env.example`](./.env.example) and [`content_store/README.md`](content_store/README.md).
 
 ## Requirements
 
 | Tool | Why |
 |------|-----|
 | Python 3.11+ | App runtime |
-| `ffmpeg` | Stub videos + iOS compress scripts |
-| `aws` CLI | Save → S3 (optional until you save) |
-| `grok` CLI + `grok login` | Required for `cli` backend |
-| `XAI_API_KEY` | Required only for `api` backend |
+| `ffmpeg` | Stub videos and timeline cuts |
+| AWS credentials | Required for real video (staging bucket) |
+| `grok` CLI + `grok login` | Required for the `cli` backend |
+| `XAI_API_KEY` | Required only for the `api` backend |
 
 Check the **Doctor** button in the header.
 
 ## Config
 
-See [`.env.example`](./.env.example):
+See [`.env.example`](./.env.example). The variable names are the ones the app already reads.
 
 | Variable | Meaning |
 |----------|---------|
 | `RALLY_GENERATE_BACKEND` | `cli` (default), `api`, or `stub` |
-| `RALLY_GROK_BIN` | Optional path to `grok` |
-| `XAI_API_KEY` | Only for `api` |
-| `RALLY_IMAGE_MODEL` / `RALLY_VIDEO_MODEL` | API models |
-| `RALLY_VIDEO_RESOLUTION` | `480p` or `720p` |
-| `RALLY_VIDEO_DURATION` | seconds (cli maps to 6 or 10) |
-| `RALLY_OUTPUT_DIR` | Working packages (default `./rallies`) |
+| `XAI_API_KEY` | Only for `api`, or to override the `grok login` session |
 | `CONTENT_S3_BUCKET` | Private bucket used to stage video |
+| `CONTENT_S3_PREFIX` | Key prefix (default `staging/`) |
 | `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | IAM key for that bucket. Optional if `aws configure` already ran |
 | `AWS_REGION` | Bucket region (default `us-east-1`) |
-| `RALLY_HOST` / `RALLY_PORT` | GUI bind address |
+| `AWS_PROFILE` | Optional named profile. Not required when the access key is set |
+| `RALLY_HOST` / `RALLY_PORT` | GUI bind address (default `127.0.0.1:8070`) |
+| `RALLY_OUTPUT_DIR` | Project folders (default `./rallies`) |
+| `RALLY_OPEN_BROWSER` | `0` skips opening a browser tab (`./start.sh`) |
+
+Image model, video model, and resolution are stored in `rallies/.imagine-settings.json`. Doctor reports them. The header does not edit them.
 
 ## Project layout
 
 ```
 app/
-  main.py              # entry
+  main.py                 # entry
   config.py
-  models/rally.py      # meta.json package model
-  pipeline/            # gates, prompts, generate, compress, upload, doctor
-  ui/studio.py         # NiceGUI studio
-defaults/step_prompts.yaml
-cmprssRally.sh         # existing iOS compressor
-SKILL.md               # creative director rules
-rallies/               # local packages (gitignored)
+  ui/studio_next.py       # the editor you see
+  ui/scenes_ui.py         # timeline editor
+  pipeline/generate_next.py
+  pipeline/prompts_next.py
+rallies/                  # local projects (gitignored)
 ```
 
-## Status
-
-- [x] Phase 0–1: gated UI, prompts, stub generate, approve chain, compress/upload wiring  
-- [x] Phase 2: Grok Imagine **API** (`api`) and **CLI subscription** (`cli`, default)  
-- [ ] Phase 4: auto mode (same graph, skip human gates)  
+`app.ui.studio`, `app.pipeline.generate`, `app.pipeline.prompts`, and `app.pipeline.expand` load the `*_next` modules. A fresh clone does not need a venv `.pth` file.

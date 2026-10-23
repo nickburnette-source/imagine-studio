@@ -1,4 +1,4 @@
-"""Entry point for Rally Builder GUI."""
+"""Entry point for Imagine Studio."""
 
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ def main() -> None:
 
     mount()
     ui.run(
-        title="Rally Builder",
+        title="Imagine Studio",
         host=HOST,
         port=PORT,
         reload=False,

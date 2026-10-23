@@ -1,5 +1,7 @@
 # Rally Builder — Local GUI Plan
 
+> This file is the old Rally Builder plan. Imagine Studio is one clip: an editor, a timeline, and a final take you can play and download. It does not use the seven-step pack, gates, or DutyCall publish. See [README.md](./README.md).
+
 A **local desktop GUI** that runs a **gated generation pipeline** for DutyCall Rally skins: human-approved steps by default, with a future **auto mode** once one-shot quality is good enough.
 
 Creative rules for *what* a Rally is live in [`SKILL.md`](./SKILL.md). That skill will expand before production use; the app loads it at runtime as the creative source of truth.
