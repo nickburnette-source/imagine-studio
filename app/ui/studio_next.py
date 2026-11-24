@@ -309,25 +309,51 @@ def mount() -> None:
 
     set_studio_busy(_task_running)
     register_routes()
+    from app.ui.glass_board import ASSET_V, register as register_glass
+
+    register_glass()
 
     @ui.page("/")
-    def index() -> None:
-        # DutyCall palette (lib/themes.dart)
+    def index(project: str = "") -> None:
         ui.dark_mode().enable()
         ui.colors(
-            primary="#127987",
-            secondary="#37BD39",
-            accent="#37BD39",
-            dark="#121212",
-            positive="#37BD39",
-            negative="#FF3B30",
+            primary="#e6e5e3",
+            secondary="#e6e5e3",
+            accent="#1084fe",
+            dark="#1e1d1d",
+            positive="#00c972",
+            negative="#ff263c",
         )
         ui.add_head_html(_HEAD_CSS)
+        ui.add_head_html(
+            f'<link rel="stylesheet" href="/glass-static/board.css?v={ASSET_V}">'
+            "<script>document.documentElement.classList.add('glass-app');</script>"
+        )
         ui.run_javascript(
+            "document.body.classList.add('glass-app');"
             "window.Quasar && Quasar.Notify.setDefaults({position:'top-right'});"
         )
 
-        global _current, _brief, _brief_open
+        global _current, _brief, _brief_open, _selected_step, _force_edit, _view_final
+        # A project link opens that folder. Same folder keeps the open
+        # session so a reload does not throw away a running take.
+        safe = (project or "").strip()
+        if (
+            safe
+            and "/" not in safe
+            and "\\" not in safe
+            and ".." not in safe
+            and (_current is None or _current.name != safe)
+        ):
+            root = (OUTPUT_DIR / safe).resolve()
+            base = OUTPUT_DIR.resolve()
+            if base in root.parents and (root / "meta.json").is_file():
+                _current = RallyPackage.load(root)
+                graph.normalize_clip(_current)
+                graph.unlock_all_steps(_current)
+                _selected_step = _sole_step(_current)
+                _force_edit = False
+                _view_final = False
         if _brief is None:
             stored = load_brief_store()
             if stored is not None:
@@ -345,12 +371,10 @@ def mount() -> None:
             "document.getElementById('rb-scene-shade')?.remove();"
         )
         with ui.header().classes(
-            "items-center justify-between px-4 dc-header"
+            "items-center justify-between px-6 gb-homebar"
         ):
             with ui.row().classes("items-center gap-2"):
-                ui.label("Imagine Studio").classes(
-                    "text-h6 text-weight-bold"
-                ).style("color: #37BD39; letter-spacing: 0.02em;")
+                ui.label("Imagine").classes("gb-word")
             with ui.row().classes("items-center gap-2"):
                 _activity_center()
                 ui.button(
@@ -651,118 +675,89 @@ def mount() -> None:
         return "rally"
 
     def _home_view() -> None:
-        """Landing: concept → Grok invents tone and a scene per clip."""
-        global _brief
-        form = {
-            "name": _brief.name if _brief else "",
-            "template": "rally",
-            "concept": _brief.concept if _brief else "",
-            "aspect": _brief.aspect_ratio if _brief else "9:16",
-        }
+        """A dark lobby. One line begins a film. Posters open the ones you have."""
+        form = {"concept": "", "aspect": "9:16"}
 
-        with ui.column().classes(
-            "w-full max-w-4xl mx-auto q-pa-md gap-5 rb-home"
-        ):
-            # ── Create card ──────────────────────────────────────
-            with ui.element("div").classes("dc-card w-full q-pa-md"):
-                ui.label("New project").classes(
-                    "text-h6 text-weight-medium q-mb-md"
-                )
+        def open_pipeline() -> None:
+            global _current, _selected_step, _force_edit, _brief_open, _brief, _view_final
+            concept = (form.get("concept") or "").strip()
+            if not concept:
+                ui.notify("Say what this film is", type="warning")
+                return
+            title = concept.splitlines()[0].strip()[:80] or "Film"
+            base = slugify(title)[:48] or "film"
+            name = base
+            n = 2
+            while (OUTPUT_DIR / name / "meta.json").is_file() and n < 40:
+                name = f"{base}-{n}"
+                n += 1
+            root = OUTPUT_DIR / name
+            if root.exists() and (root / "meta.json").is_file():
+                ui.notify("That film already exists", type="warning")
+                return
+            root.mkdir(parents=True, exist_ok=True)
+            pkg = graph.new_rally(
+                name=name,
+                concept=concept,
+                root=root,
+                aspect_ratio=str(form.get("aspect") or "9:16"),
+                template="rally",
+            )
+            pkg.display_name = title
+            pkg.save()
+            _current = pkg
+            _selected_step = _sole_step(pkg)
+            _force_edit = False
+            _view_final = False
+            _brief_open = False
+            _brief = None
+            clear_brief_store()
+            ui.navigate.to("/")
 
-                ui.label("Name").classes("dc-field-title")
-                name_in = (
-                    ui.input(value=form["name"])
-                    .classes("w-full dc-input")
-                    .props(
-                        'outlined dense dark '
-                        'placeholder="Folder name on disk"'
-                    )
-                )
-                name_in.bind_value(form, "name")
-
-                ui.label("Concept").classes("dc-field-title q-mt-md")
+        with ui.column().classes("gb-lobby"):
+            with ui.element("div").classes("gb-composer"):
+                ui.label("What are we making?").classes("gb-composer-k")
                 concept_in = (
-                    ui.textarea(value=form["concept"])
-                    .classes("w-full dc-input")
+                    ui.textarea(value="")
+                    .classes("w-full gb-composer-field")
                     .props(
-                        "outlined dense dark autogrow "
-                        'placeholder="What this is, and the vibe"'
+                        "borderless dark autogrow "
+                        'placeholder="A night lobby, rain on the glass"'
                     )
                 )
                 concept_in.bind_value(form, "concept")
-                ui.label(
-                    "Opens the editor with this concept."
-                ).classes("dc-hint")
+                with ui.row().classes("gb-composer-row items-center"):
+                    aspect_btns: dict = {}
 
-                ui.label("Aspect").classes("dc-field-title q-mt-md")
-                aspect = (
-                    ui.select(["9:16", "1:1"], value=form["aspect"])
-                    .classes("w-40 dc-input")
-                    .props("outlined dense dark")
-                )
-                aspect.bind_value(form, "aspect")
-                ui.label(
-                    "9:16 is portrait · 1:1 is square"
-                ).classes("dc-hint")
+                    def pick(ratio: str = "9:16") -> None:
+                        form["aspect"] = ratio
+                        for key, btn in aspect_btns.items():
+                            btn.classes(remove="is-on")
+                            if key == ratio:
+                                btn.classes(add="is-on")
 
-                def open_pipeline() -> None:
-                    global _current, _selected_step, _force_edit, _brief_open, _brief
-                    concept = (form.get("concept") or "").strip()
-                    if not concept:
-                        ui.notify(
-                            "Type a concept first",
-                            type="warning",
+                    for ratio, label in (
+                        ("9:16", "Portrait"),
+                        ("16:9", "Wide"),
+                        ("1:1", "Square"),
+                    ):
+                        btn = ui.button(
+                            label, on_click=lambda r=ratio: pick(r)
+                        ).props("flat no-caps dense").classes(
+                            "gb-aspect" + (" is-on" if ratio == form["aspect"] else "")
                         )
-                        return
-                    typed = (
-                        form.get("name") or concept[:48] or "project"
-                    ).strip()
-                    name = slugify(typed)
-                    root = OUTPUT_DIR / name
-                    if root.exists() and (root / "meta.json").exists():
-                        ui.notify(
-                            f"“{name}” already exists — pick another name",
-                            type="warning",
-                        )
-                        return
-                    root.mkdir(parents=True, exist_ok=True)
-                    pkg = graph.new_rally(
-                        name=typed,
-                        concept=concept,
-                        root=root,
-                        aspect_ratio=str(form.get("aspect") or "9:16"),
-                        template="rally",
-                    )
-                    pkg.save()
-                    _current = pkg
-                    _selected_step = _sole_step(pkg)
-                    _force_edit = False
-                    global _view_final
-                    _view_final = False
-                    _brief_open = False
-                    _brief = None
-                    clear_brief_store()
-                    ui.notify(f"Ready · {name}", type="positive")
-                    ui.navigate.to("/")
+                        aspect_btns[ratio] = btn
+                    ui.element("div").classes("gb-composer-gap")
+                    ui.button("Begin", on_click=open_pipeline).props(
+                        "unelevated no-caps"
+                    ).classes("gb-go")
 
-                with ui.column().classes("w-full q-mt-lg gap-2"):
-                    ui.button(
-                        "Open editor",
-                        icon="play_arrow",
-                        on_click=open_pipeline,
-                    ).classes("w-full dc-cta").props(
-                        "unelevated color=secondary no-caps"
-                    )
-
-            # ── Recent grid (newest first, Preview thumbnails) ───
-            ui.label("Recent").classes("text-h6 text-weight-medium")
             rallies = list_rallies(OUTPUT_DIR)
+            ui.label("Films").classes("gb-lobby-k")
             if not rallies:
-                ui.label("No projects yet — create one above.").classes(
-                    "text-grey-6"
-                )
+                ui.label("Films you begin show up here.").classes("gb-lobby-empty")
             else:
-                with ui.element("div").classes("dc-rally-grid"):
+                with ui.element("div").classes("gb-posters"):
                     for path in rallies:
                         _recent_card(path)
 
@@ -1021,23 +1016,59 @@ def mount() -> None:
             title = path.name
             subtitle = ""
 
+        import html
         from urllib.parse import quote
 
-        thumb: Path | None = None
-        for name in ("start.png", "Rally.start.png", "Preview.png"):
-            cand = path / name
-            if cand.is_file():
-                thumb = cand
-                break
-        if thumb is None:
-            pngs = sorted(p for p in path.glob("*.png") if p.is_file())
-            thumb = pngs[0] if pngs else None
-        bust = int(thumb.stat().st_mtime * 1000) if thumb is not None else 0
-        preview_url = (
-            f"/media/{quote(path.name)}/{quote(thumb.name)}?t={bust}"
-            if thumb is not None
-            else ""
-        )
+        poster_kind = ""
+        preview_url = ""
+        try:
+            from app.pipeline.library import catalog
+
+            assets = catalog(pkg)
+            by_asset = {row["id"]: row for row in assets}
+            stored = pkg.board if isinstance(pkg.board, dict) else {}
+
+            def pick(asset_id: str, kind: str):
+                row = by_asset.get(asset_id)
+                if row and row.get("kind") == kind and row.get("path"):
+                    return row
+                return None
+
+            chosen = None
+            for item in stored.get("sequence") or []:
+                if isinstance(item, dict):
+                    chosen = pick(str(item.get("asset_id") or ""), "video")
+                    if chosen:
+                        break
+            if chosen is None:
+                chosen = pick(str(stored.get("pending") or ""), "video")
+            if chosen is None:
+                for item in stored.get("stills") or []:
+                    if isinstance(item, dict):
+                        chosen = pick(str(item.get("asset_id") or ""), "still")
+                        if chosen:
+                            break
+            if chosen is None:
+                chosen = next(
+                    (row for row in assets if row.get("kind") == "still" and row.get("path")),
+                    None,
+                )
+            if chosen is None:
+                chosen = next(
+                    (row for row in assets if row.get("kind") == "video" and row.get("path")),
+                    None,
+                )
+            if chosen is not None:
+                poster_kind = str(chosen.get("kind") or "")
+                bust = int(Path(chosen["path"]).stat().st_mtime * 1000)
+                preview_url = (
+                    f"/media/{quote(path.name)}/{quote(chosen['rel'], safe='/')}?t={bust}"
+                )
+                if poster_kind == "video":
+                    preview_url += "#t=0.4"
+        except Exception:  # noqa: BLE001
+            poster_kind = ""
+            preview_url = ""
 
         def open_pkg(p: Path = path) -> None:
             _open_rally(p)
@@ -1081,20 +1112,37 @@ def mount() -> None:
                     )
             dlg.open()
 
-        with ui.element("div").classes("dc-rally-card").on(
-            "click", open_pkg
-        ):
-            if preview_url:
-                ui.html(
-                    f'<img class="dc-rally-thumb" src="{preview_url}" '
-                    f'alt="{title}" loading="lazy" />',
-                    sanitize=False,
-                )
-            else:
-                with ui.element("div").classes("dc-rally-thumb dc-rally-empty"):
-                    ui.icon("image_not_supported", size="32px").classes(
-                        "text-grey-7"
+        try:
+            ratio_key = pkg.aspect_ratio or "9:16"
+            ratio = ratio_key.replace(":", " / ")
+        except Exception:  # noqa: BLE001
+            ratio_key = "9:16"
+            ratio = "9 / 16"
+        shape = {"16:9": "is-wide", "1:1": "is-square"}.get(ratio_key, "is-tall")
+        safe_title = html.escape(title, quote=True)
+        with ui.element("div").classes(f"gb-poster {shape}").on("click", open_pkg):
+            with ui.element("div").classes("gb-poster-frame").style(
+                f"aspect-ratio: {ratio}"
+            ):
+                if preview_url and poster_kind == "video":
+                    ui.html(
+                        f'<video class="gb-poster-still" muted playsinline preload="metadata" '
+                        f'src="{preview_url}"></video>',
+                        sanitize=False,
                     )
+                elif preview_url:
+                    ui.html(
+                        f'<img class="gb-poster-still" src="{preview_url}" '
+                        f'alt="{safe_title}" loading="lazy" />',
+                        sanitize=False,
+                    )
+                else:
+                    with ui.element("div").classes("gb-poster-still gb-poster-empty"):
+                        ui.label(title[:1] or "·").classes("gb-poster-mark")
+                with ui.element("div").classes("gb-poster-cap"):
+                    ui.label(title).classes("dc-rally-title")
+                    if subtitle:
+                        ui.label(subtitle).classes("dc-rally-sub")
             del_btn = (
                 ui.button(icon="delete_outline")
                 .props("flat dense round size=sm color=grey")
@@ -1102,10 +1150,6 @@ def mount() -> None:
                 .tooltip("Delete project")
             )
             del_btn.on("click.stop", ask_delete)
-            with ui.element("div").classes("dc-rally-meta"):
-                ui.label(title).classes("dc-rally-title")
-                if subtitle:
-                    ui.label(subtitle).classes("dc-rally-sub")
 
     def _studio_view() -> None:
         shell = ui.element("div").classes("rb-shell")
@@ -1139,6 +1183,12 @@ def mount() -> None:
         ui.navigate.to("/")
 
     def _build_studio(refresh_all) -> None:
+        # The timeline board is the studio. The formula editor below stays
+        # in the file so the generation pipeline it calls is still readable.
+        from app.ui.glass_board import render_studio
+
+        render_studio(get_pkg=_pkg, close=_close_rally)
+        return
         pkg = _pkg()
         before_title = pkg.display_name
         pkg.ensure_display_name()
@@ -1200,10 +1250,16 @@ def mount() -> None:
                 job_spin = ui.spinner("dots", size="1em").classes("rb-chrome-job-spin")
                 job_lab = ui.label("").classes("rb-chrome-job-text")
 
+            poll_box: dict = {}
+
             def _poll_chrome_job() -> None:
-                if not _el_alive(job_chip):
+                # Closing the rally clears _current before this page is gone.
+                if _current is None or not _el_alive(job_chip):
+                    timer = poll_box.get("t")
+                    if timer is not None:
+                        timer.cancel()
                     return
-                p = _pkg()
+                p = _current
                 sid = _selected_step
                 key = _job_key(p.name, sid)
                 generating = _is_generating(p.name, sid)
@@ -1238,7 +1294,7 @@ def mount() -> None:
                         job_spin.set_visibility(False)
 
             if phase == "edit":
-                ui.timer(0.45, _poll_chrome_job)
+                poll_box["t"] = ui.timer(0.45, _poll_chrome_job)
 
             def _show_final() -> None:
                 global _view_final

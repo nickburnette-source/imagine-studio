@@ -248,6 +248,8 @@ class RallyPackage(BaseModel):
     publish_tier: str | None = None
     # Public-facing folder name under free|premium/rallies/ (e.g. "DC Knight")
     display_name: str | None = None
+    # Timeline composer for one project: storyboard, prompt clips, kept takes.
+    board: dict[str, Any] = Field(default_factory=dict)
     # Voices + room-tone tags that ride every clip (Direct canvas).
     kit: dict[str, Any] = Field(
         default_factory=lambda: {
